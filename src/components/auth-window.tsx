@@ -58,11 +58,11 @@ export function AuthWindow() {
 
   return (
     <main className="relative flex min-h-full items-center justify-center overflow-hidden px-4 py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_#fb923c22,_transparent_42%),radial-gradient(circle_at_bottom_left,_#7c3aed22,_transparent_36%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--glow-a),transparent_42%),radial-gradient(circle_at_bottom_left,var(--glow-b),transparent_36%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-size-[48px_48px]" />
 
-      <section className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/80 shadow-[0_30px_80px_-32px_rgba(0,0,0,0.85)] backdrop-blur-xl">
-        <header className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+      <section className="relative w-full max-w-md overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--panel)]/90 shadow-[0_30px_80px_-32px_rgba(0,0,0,0.85)] backdrop-blur-xl">
+        <header className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
           <span className="size-2.5 rounded-full bg-red-400/90" />
           <span className="size-2.5 rounded-full bg-amber-400/90" />
           <span className="size-2.5 rounded-full bg-emerald-400/90" />
@@ -71,16 +71,16 @@ export function AuthWindow() {
 
         <div className="px-6 py-8 sm:px-8">
           <div className="mb-6 flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-2xl bg-orange-400 text-lg font-semibold text-zinc-950">
+            <span className="grid size-10 place-items-center rounded-2xl bg-accent text-lg font-semibold text-on-accent">
               D
             </span>
             <div>
-              <p className="text-sm font-medium text-orange-300">Dirami</p>
+              <p className="text-sm font-medium text-accent-soft">Dirami</p>
               <h1 className="text-2xl font-semibold tracking-tight">Мессенджер</h1>
             </div>
           </div>
 
-          <div className="mb-6 grid grid-cols-2 rounded-2xl bg-zinc-950 p-1">
+          <div className="mb-6 grid grid-cols-2 rounded-2xl bg-[var(--bg)] p-1">
             <button
               type="button"
               onClick={() => {
@@ -117,7 +117,7 @@ export function AuthWindow() {
               <input
                 autoComplete="username"
                 autoFocus
-                className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-base text-zinc-50 placeholder:text-zinc-600 focus:border-orange-400/70"
+                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-base placeholder:text-[var(--muted-2)] focus:border-[var(--accent)]"
                 maxLength={24}
                 name="nickname"
                 onChange={(event) => setNickname(event.target.value)}
@@ -147,7 +147,7 @@ export function AuthWindow() {
             ) : null}
 
             <button
-              className="w-full rounded-2xl bg-orange-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-orange-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="hover-accent w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent transition disabled:cursor-not-allowed disabled:opacity-60"
               disabled={pending}
               type="submit"
             >

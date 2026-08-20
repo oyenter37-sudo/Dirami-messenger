@@ -13,6 +13,13 @@ export function parsePassword(value: unknown) {
   return value;
 }
 
+export function parseBio(value: unknown) {
+  if (typeof value !== "string") return null;
+  const bio = value.trim();
+  if (bio.length > 280) return null;
+  return bio;
+}
+
 export function parseMessageContent(value: unknown) {
   if (typeof value !== "string") return null;
   const content = value.trim();

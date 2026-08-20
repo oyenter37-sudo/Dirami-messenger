@@ -14,8 +14,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ru" className={`${inter.variable} h-full antialiased`}>
-      <body className="h-full bg-zinc-950 font-sans text-zinc-50">{children}</body>
+    <html lang="ru" data-theme="lagoon" className={`${inter.variable} h-full antialiased`}>
+      <body className="h-full bg-[var(--bg)] font-sans text-[var(--text)]">
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('dirami-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();",
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

@@ -6,6 +6,7 @@ export type SessionUser = {
 export type PublicUser = {
   id: string;
   nickname: string;
+  bio: string;
 };
 
 export type ChatPreview = {

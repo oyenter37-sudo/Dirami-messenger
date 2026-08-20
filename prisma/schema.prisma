@@ -11,6 +11,7 @@ model User {
   id               String    @id @default(cuid())
   nickname         String    @unique
   passwordHash     String
+  bio              String    @default("")
   createdAt        DateTime  @default(now())
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")

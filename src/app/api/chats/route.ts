@@ -15,7 +15,7 @@ export async function GET() {
   const [users, messages, unreadGroups] = await Promise.all([
     prisma.user.findMany({
       where: { id: { not: me } },
-      select: { id: true, nickname: true },
+      select: { id: true, nickname: true, bio: true },
       orderBy: { nickname: "asc" },
     }),
     prisma.message.findMany({
