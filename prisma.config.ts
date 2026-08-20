@@ -2,13 +2,11 @@ import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
 function migrationUrl() {
-  const direct = process.env.DIRECT_URL?.trim();
-  if (direct) return direct;
-
   const url = process.env.DATABASE_URL;
-  if (!url) return url;
+  if (!url) return process.env.DIRECT_URL;
 
-  // Neon pooler cannot take Postgres advisory locks used by migrate.
+  // Keep the same database name as runtime (neondb). Only drop the pooler host.
+  // DIRECT_URL is ignored when it points at a different database (e.g. postgres).
   return url.replace("-pooler.", ".").replace(".pooler.", ".");
 }
 

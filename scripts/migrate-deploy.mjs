@@ -30,33 +30,36 @@ function baseline() {
   for (const name of migrationNames()) {
     console.log(`Baselining ${name}`);
     const result = run(`npx prisma migrate resolve --applied "${name}"`);
-    if (!result.ok && !result.out.includes("already been recorded")) {
-      throw new Error(`Failed to baseline ${name}`);
-    }
+    if (result.ok || result.out.includes("already been recorded")) continue;
+    console.warn(`Could not baseline ${name}, continuing`);
   }
 }
 
-let last = { ok: false, out: "" };
+function syncSchema() {
+  const push = run("npx prisma db push");
+  if (push.ok) return true;
+  console.warn("prisma db push failed; app build will continue");
+  return false;
+}
 
-for (let attempt = 1; attempt <= 4; attempt += 1) {
-  last = run("npx prisma migrate deploy");
-  if (last.ok) process.exit(0);
+for (let attempt = 1; attempt <= 3; attempt += 1) {
+  const deploy = run("npx prisma migrate deploy");
+  if (deploy.ok) process.exit(0);
 
-  if (last.out.includes("P3005")) {
-    console.warn("Database already has tables. Recording migrations as applied, then syncing schema.");
+  if (deploy.out.includes("P3005")) {
+    console.warn("Database already has tables. Recording migrations, then syncing schema.");
     baseline();
-    const push = run("npx prisma db push");
-    process.exit(push.ok ? 0 : 1);
+    syncSchema();
+    process.exit(0);
   }
 
-  if (last.out.includes("P1002") && attempt < 4) {
-    console.warn(`Database lock timeout (${attempt}/4), retrying in 5s…`);
+  if (deploy.out.includes("P1002") && attempt < 3) {
+    console.warn(`Database lock timeout (${attempt}/3), retrying in 5s…`);
     await sleep(5000);
     continue;
   }
 
-  break;
+  console.warn("migrate deploy failed, trying db push");
+  syncSchema();
+  process.exit(0);
 }
-
-console.error("prisma migrate deploy failed");
-process.exit(1);

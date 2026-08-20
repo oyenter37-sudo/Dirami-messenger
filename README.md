@@ -28,7 +28,8 @@ AUTH_SECRET="длинная-случайная-строка"
 
 `AUTH_SECRET` можно сгенерировать так: `openssl rand -base64 32`.
 
-Для Neon: `DATABASE_URL` — pooled (с `-pooler`), `DIRECT_URL` — прямой хост без `-pooler`. Миграции идут по прямому адресу, иначе Vercel ловит `P1002` (advisory lock timeout).
+Для Neon в `DATABASE_URL` должен быть pooled-хост (`-pooler`) и база **neondb**.
+Миграции сами уберут `-pooler`, но имя базы не меняют. `DIRECT_URL` не обязателен.
 
 ## База
 
