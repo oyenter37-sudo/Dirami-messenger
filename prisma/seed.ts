@@ -1,6 +1,7 @@
 import "dotenv/config";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient, Prisma } from "../src/generated/prisma/client";
+import bcrypt from "bcryptjs";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../src/generated/prisma/client";
 
 const url = process.env.DATABASE_URL;
 
@@ -9,51 +10,56 @@ if (!url) {
 }
 
 const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url }),
+  adapter: new PrismaPg({ connectionString: url }),
 });
 
-const userData: Prisma.UserCreateInput[] = [
-  {
-    name: "Alice",
-    email: "alice@prisma.io",
-    posts: {
-      create: [
-        {
-          title: "Join the Prisma Discord",
-          content: "https://pris.ly/discord",
-          published: true,
-        },
-        {
-          title: "Prisma on YouTube",
-          content: "https://pris.ly/youtube",
-        },
-      ],
-    },
-  },
-  {
-    name: "Bob",
-    email: "bob@prisma.io",
-    posts: {
-      create: [
-        {
-          title: "Follow Prisma on Twitter",
-          content: "https://www.twitter.com/prisma",
-          published: true,
-        },
-      ],
-    },
-  },
-];
+const demoPassword = "password123";
 
 async function main() {
-  await prisma.post.deleteMany();
-  await prisma.user.deleteMany();
+  const passwordHash = await bcrypt.hash(demoPassword, 10);
 
-  for (const user of userData) {
-    await prisma.user.create({ data: user });
+  const mara = await prisma.user.upsert({
+    where: { nickname: "mara" },
+    update: {},
+    create: { nickname: "mara", passwordHash },
+  });
+
+  const leo = await prisma.user.upsert({
+    where: { nickname: "leo" },
+    update: {},
+    create: { nickname: "leo", passwordHash },
+  });
+
+  const nika = await prisma.user.upsert({
+    where: { nickname: "nika" },
+    update: {},
+    create: { nickname: "nika", passwordHash },
+  });
+
+  const existing = await prisma.message.count();
+  if (existing === 0) {
+    await prisma.message.createMany({
+      data: [
+        {
+          senderId: mara.id,
+          receiverId: leo.id,
+          content: "Привет, это Dirami.",
+        },
+        {
+          senderId: leo.id,
+          receiverId: mara.id,
+          content: "Работает. Пиши сюда.",
+        },
+        {
+          senderId: nika.id,
+          receiverId: mara.id,
+          content: "Я тоже здесь.",
+        },
+      ],
+    });
   }
 
-  console.log("Database seeded with sample users and posts.");
+  console.log("Seeded mara, leo, nika / password123");
 }
 
 main()

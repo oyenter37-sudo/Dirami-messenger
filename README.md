@@ -1,43 +1,49 @@
 # Dirami messenger
 
-Starter: **Next.js 16** (App Router, TypeScript) and **Prisma 7** on SQLite.
+Мессенджер на Next.js 16: ник + пароль, чаты со всеми пользователями, сообщения через **polling**, бэкенд — **Vercel Functions** (Route Handlers).
 
-## Stack
+## Стек
 
-- Next.js 16 / React 19
-- Prisma ORM 7 (`prisma-client` + `@prisma/adapter-better-sqlite3`)
-- SQLite (`prisma/dev.db`) — no database server required
+- Next.js 16 / React 19 / Tailwind CSS 4
+- Prisma 7 + PostgreSQL (`@prisma/adapter-pg`)
+- JWT-сессия в httpOnly cookie (`jose` + `bcryptjs`)
 
-## Setup
+## Как устроено
+
+1. `/` — окно входа и регистрации (ник, пароль).
+2. `/chat` — список всех пользователей и переписка.
+3. `GET /api/chats` — список чатов, клиент опрашивает каждые 4 сек.
+4. `GET /api/messages?peerId=&after=` — новые сообщения, опрос каждые 2 сек.
+5. `POST /api/messages` — отправка.
+
+## Переменные окружения
+
+Скопируй `.env.example` в `.env`:
+
+```
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/dirami?sslmode=require"
+AUTH_SECRET="длинная-случайная-строка"
+```
+
+`AUTH_SECRET` можно сгенерировать так: `openssl rand -base64 32`.
+
+## База
+
+Нужен PostgreSQL (Neon, Supabase, Vercel Postgres — любой).
 
 ```bash
 npm install
-cp .env.example .env
-npm run db:migrate
+npx prisma migrate deploy
 npm run db:seed
-npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Home lists users from the database, `/posts` lists posts with authors.
+Демо-аккаунты после сида: `mara`, `leo`, `nika` / пароль `password123`.
 
-## Prisma
+## Деплой на Vercel
 
-| Command | What it does |
-| --- | --- |
-| `npm run db:migrate` | Create/apply migrations |
-| `npm run db:seed` | Seed sample users and posts |
-| `npm run db:studio` | Open Prisma Studio |
-| `npm run db:generate` | Generate Prisma Client |
-| `npm run db:push` | Push schema without a migration |
+1. Репозиторий → Import в Vercel.
+2. Environment Variables: `DATABASE_URL`, `AUTH_SECRET`.
+3. Build command уже в `package.json`: `prisma generate && prisma migrate deploy && next build`.
+4. Deploy.
 
-- Schema: `prisma/schema.prisma`
-- Client singleton: `src/lib/prisma.ts`
-- Seed: `prisma/seed.ts`
-- Config: `prisma.config.ts`
-
-## Switch to PostgreSQL
-
-1. Install `@prisma/adapter-pg` and `pg`
-2. Set `provider = "postgresql"` in `prisma/schema.prisma`
-3. Point `DATABASE_URL` at Postgres
-4. Use `PrismaPg` instead of `PrismaBetterSqlite3` in `src/lib/prisma.ts` and `prisma/seed.ts`
+SQLite на Vercel не используется: serverless-функции пишут в Postgres.
