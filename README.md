@@ -21,11 +21,14 @@
 Скопируй `.env.example` в `.env`:
 
 ```
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/dirami?sslmode=require"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST-pooler.REGION.aws.neon.tech/neondb?sslmode=require"
+DIRECT_URL="postgresql://USER:PASSWORD@HOST.REGION.aws.neon.tech/neondb?sslmode=require"
 AUTH_SECRET="длинная-случайная-строка"
 ```
 
 `AUTH_SECRET` можно сгенерировать так: `openssl rand -base64 32`.
+
+Для Neon: `DATABASE_URL` — pooled (с `-pooler`), `DIRECT_URL` — прямой хост без `-pooler`. Миграции идут по прямому адресу, иначе Vercel ловит `P1002` (advisory lock timeout).
 
 ## База
 
