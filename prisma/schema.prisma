@@ -24,9 +24,13 @@ model Message {
   readAt     DateTime?
   senderId   String
   receiverId String
+  replyToId  String?
   sender     User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver   User      @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  replyTo    Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    Message[] @relation("MessageReplies")
 
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, readAt])
+  @@index([replyToId])
 }

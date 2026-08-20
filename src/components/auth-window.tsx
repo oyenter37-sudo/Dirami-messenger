@@ -130,7 +130,7 @@ export function AuthWindow() {
               <span className="mb-1.5 block text-sm text-zinc-400">Пароль</span>
               <input
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
-                className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-base text-zinc-50 placeholder:text-zinc-600 focus:border-orange-400/70"
+                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-base placeholder:text-[var(--muted-2)] focus:border-[var(--accent)]"
                 maxLength={72}
                 name="password"
                 onChange={(event) => setPassword(event.target.value)}

@@ -157,6 +157,17 @@ input:focus {
   background-color: var(--accent-hover);
 }
 
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.glass {
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+  backdrop-filter: blur(22px);
+}
+
 .scrollbar-thin {
   scrollbar-width: thin;
   scrollbar-color: var(--thumb) transparent;

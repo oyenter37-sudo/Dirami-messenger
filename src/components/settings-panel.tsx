@@ -59,9 +59,9 @@ export function SettingsPanel({ nickname, onClose }: Props) {
   }
 
   return (
-    <div className="absolute inset-0 z-20 flex bg-black/50 p-3" onClick={onClose}>
+    <div className="overlay-in absolute inset-0 z-20 flex bg-black/55 p-3 backdrop-blur-md" onClick={onClose}>
       <section
-        className="ml-auto flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--panel)] shadow-2xl"
+        className="sheet-in glass ml-auto flex h-full w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-[var(--border)] shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">

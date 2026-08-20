@@ -7,12 +7,29 @@ import type { ChatMessage } from "@/lib/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const replyInclude = {
+  replyTo: {
+    select: {
+      id: true,
+      content: true,
+      senderId: true,
+      sender: { select: { nickname: true } },
+    },
+  },
+} as const;
+
 function serialize(message: {
   id: string;
   content: string;
   createdAt: Date;
   senderId: string;
   receiverId: string;
+  replyTo: {
+    id: string;
+    content: string;
+    senderId: string;
+    sender: { nickname: string };
+  } | null;
 }): ChatMessage {
   return {
     id: message.id,
@@ -20,6 +37,14 @@ function serialize(message: {
     createdAt: message.createdAt.toISOString(),
     senderId: message.senderId,
     receiverId: message.receiverId,
+    replyTo: message.replyTo
+      ? {
+          id: message.replyTo.id,
+          content: message.replyTo.content,
+          senderId: message.replyTo.senderId,
+          nickname: message.replyTo.sender.nickname,
+        }
+      : null,
   };
 }
 
@@ -63,6 +88,7 @@ export async function GET(request: Request) {
         validAfter ? { createdAt: { gt: validAfter } } : {},
       ],
     },
+    include: replyInclude,
     orderBy: { createdAt: "asc" },
     take: 200,
   });
@@ -93,9 +119,14 @@ export async function POST(request: Request) {
     return jsonError("Некорректный запрос", 400);
   }
 
-  const payload = body as { peerId?: unknown; content?: unknown };
+  const payload = body as {
+    peerId?: unknown;
+    content?: unknown;
+    replyToId?: unknown;
+  };
   const peerId = typeof payload.peerId === "string" ? payload.peerId : "";
   const content = parseMessageContent(payload.content);
+  const replyToId = typeof payload.replyToId === "string" ? payload.replyToId : null;
 
   if (!peerId) {
     return jsonError("Не указан собеседник", 400);
@@ -117,12 +148,30 @@ export async function POST(request: Request) {
     return jsonError("Пользователь не найден", 404);
   }
 
+  if (replyToId) {
+    const quoted = await prisma.message.findFirst({
+      where: {
+        id: replyToId,
+        OR: [
+          { senderId: me, receiverId: peerId },
+          { senderId: peerId, receiverId: me },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!quoted) {
+      return jsonError("Сообщение для ответа не найдено", 400);
+    }
+  }
+
   const message = await prisma.message.create({
     data: {
       content,
       senderId: me,
       receiverId: peerId,
+      replyToId,
     },
+    include: replyInclude,
   });
 
   return NextResponse.json({ message: serialize(message) });

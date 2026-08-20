@@ -26,4 +26,10 @@ export type ChatMessage = {
   createdAt: string;
   senderId: string;
   receiverId: string;
+  replyTo: {
+    id: string;
+    content: string;
+    senderId: string;
+    nickname: string;
+  } | null;
 };
