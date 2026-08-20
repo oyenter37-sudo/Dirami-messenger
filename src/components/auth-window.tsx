@@ -23,12 +23,25 @@ export function AuthWindow() {
         mode === "login" ? "/api/auth/login" : "/api/auth/register",
         {
           method: "POST",
+          credentials: "same-origin",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ nickname, password }),
         },
       );
 
-      const data = (await response.json()) as { error?: string };
+      let data: { error?: string } = {};
+      try {
+        data = (await response.json()) as { error?: string };
+      } catch {
+        setError(
+          response.ok
+            ? "Сеть недоступна"
+            : `Ошибка сервера (${response.status})`,
+        );
+        setPending(false);
+        return;
+      }
+
       if (!response.ok) {
         setError(data.error ?? "Не получилось войти");
         setPending(false);

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
-import bcrypt from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { jwtVerify, SignJWT } from "jose";
+import type { NextResponse } from "next/server";
 import { SESSION_COOKIE } from "@/lib/constants";
 import type { SessionUser } from "@/lib/types";
 
@@ -17,18 +18,18 @@ function getSecret() {
 }
 
 export async function hashPassword(password: string) {
-  return bcrypt.hash(password, 10);
+  return hash(password, 10);
 }
 
 export async function verifyPassword(password: string, passwordHash: string) {
-  return bcrypt.compare(password, passwordHash);
+  return compare(password, passwordHash);
 }
 
 export async function signSession(user: SessionUser) {
   return new SignJWT({ userId: user.userId, nickname: user.nickname })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_MAX_AGE}s`)
+    .setExpirationTime("30d")
     .sign(getSecret());
 }
 
@@ -44,21 +45,25 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
   }
 }
 
-export async function setSessionCookie(user: SessionUser) {
-  const token = await signSession(user);
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, token, {
+function cookieOptions(maxAge = SESSION_MAX_AGE) {
+  return {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_MAX_AGE,
-  });
+    maxAge,
+  };
 }
 
-export async function clearSessionCookie() {
-  const jar = await cookies();
-  jar.delete(SESSION_COOKIE);
+export async function attachSession(response: NextResponse, user: SessionUser) {
+  const token = await signSession(user);
+  response.cookies.set(SESSION_COOKIE, token, cookieOptions());
+  return response;
+}
+
+export function clearSession(response: NextResponse) {
+  response.cookies.set(SESSION_COOKIE, "", cookieOptions(0));
+  return response;
 }
 
 export async function getSession(): Promise<SessionUser | null> {
