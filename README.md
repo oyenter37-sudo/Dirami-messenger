@@ -42,7 +42,8 @@ npm run db:seed
 ## Деплой на Vercel
 
 1. Репозиторий → Import в Vercel.
-2. Environment Variables: `DATABASE_URL`, `AUTH_SECRET`.
+2. Environment Variables — **обе обязательны**: `DATABASE_URL` и `AUTH_SECRET`.
+   Без `AUTH_SECRET` аккаунт создаётся, но войти нельзя.
 3. Build command уже в `package.json`: `prisma generate && prisma migrate deploy && next build`.
 4. Deploy.
 
