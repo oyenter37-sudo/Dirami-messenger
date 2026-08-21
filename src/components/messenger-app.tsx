@@ -192,7 +192,7 @@ export function MessengerApp({ me }: Props) {
       </aside>
 
       <section
-        className={`h-full min-w-0 flex-1 flex-col ${peerId ? "flex" : "hidden md:flex"}`}
+        className={`chat-wallpaper h-full min-w-0 flex-1 flex-col ${peerId ? "flex" : "hidden md:flex"}`}
       >
         {!selected ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
@@ -521,72 +521,45 @@ function Conversation({
       {menu ? (
         <div className="menu-overlay fixed inset-0 z-40" onClick={() => setMenu(null)}>
           <div
-            className="glass-menu menu-pop absolute w-[min(92vw,22.5rem)] overflow-hidden rounded-[2rem] p-3"
+            className="glass-menu menu-pop absolute overflow-hidden rounded-2xl py-1"
             onClick={(event) => event.stopPropagation()}
             style={{ left: menu.x, top: menu.y }}
           >
-            <p className="truncate px-3 pt-2 pb-1 text-[11px] tracking-wide text-white/55 uppercase">
-              {messages.find((item) => item.id === menu.id)?.content}
-            </p>
-            <div className="mt-1 grid grid-cols-2 gap-2 p-1">
-              <button
-                className="menu-btn flex flex-col items-center gap-3 rounded-[1.4rem] bg-white/8 px-4 py-5 text-white transition hover:bg-white/16"
-                onClick={async () => {
-                  const target = messages.find((item) => item.id === menu.id);
-                  if (target) await navigator.clipboard.writeText(target.content);
-                  setMenu(null);
-                }}
-                type="button"
-              >
-                <span className="grid size-14 place-items-center rounded-2xl bg-white/12 text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]">
-                  <svg fill="none" height="28" viewBox="0 0 24 24" width="28">
-                    <rect
-                      height="13"
-                      rx="2"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      width="13"
-                      x="8"
-                      y="8"
-                    />
-                    <path
-                      d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                </span>
-                <span className="text-base font-semibold">Копировать</span>
-              </button>
-              <button
-                className="menu-btn flex flex-col items-center gap-3 rounded-[1.4rem] bg-white/8 px-4 py-5 text-white transition hover:bg-white/16"
-                onClick={() => {
-                  const target = messages.find((item) => item.id === menu.id);
-                  if (target) setReplyTo(target);
-                  setMenu(null);
-                }}
-                type="button"
-              >
-                <span className="grid size-14 place-items-center rounded-2xl bg-[var(--accent)] text-2xl text-[var(--on-accent)] shadow-[0_10px_24px_-10px_var(--accent)]">
-                  <svg fill="none" height="28" viewBox="0 0 24 24" width="28">
-                    <path
-                      d="M9 14 4 9l5-5"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.8"
-                    />
-                    <path
-                      d="M20 20v-7a4 4 0 0 0-4-4H4"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                </span>
-                <span className="text-base font-semibold">Ответить</span>
-              </button>
+            <div className="flex justify-between gap-0.5 px-1.5 pt-1.5 pb-1">
+              {REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  className="grid size-7 place-items-center rounded-full text-[15px] hover:bg-white/10"
+                  onClick={() => void react(menu.id, emoji)}
+                  type="button"
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
+            <div className="mx-2 h-px bg-white/10" />
+            <button
+              className="block w-full px-3.5 py-2 text-left text-[13px] hover:bg-white/10"
+              onClick={() => {
+                const target = messages.find((item) => item.id === menu.id);
+                if (target) setReplyTo(target);
+                setMenu(null);
+              }}
+              type="button"
+            >
+              Ответить
+            </button>
+            <button
+              className="block w-full px-3.5 py-2 text-left text-[13px] hover:bg-white/10"
+              onClick={async () => {
+                const target = messages.find((item) => item.id === menu.id);
+                if (target) await navigator.clipboard.writeText(target.content);
+                setMenu(null);
+              }}
+              type="button"
+            >
+              Копировать
+            </button>
           </div>
         </div>
       ) : null}
