@@ -28,29 +28,6 @@ export function SettingsPanel({ nickname, onClose }: Props) {
     applyTheme(id);
   }
 
-  async function saveBio() {
-    setPending(true);
-    setMessage("");
-    try {
-      const response = await fetch("/api/auth/me", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ bio }),
-      });
-      const data = (await response.json()) as { error?: string; user?: { bio: string } };
-      if (!response.ok) {
-        setMessage(data.error ?? "Не сохранилось");
-        return;
-      }
-      setSavedBio(data.user?.bio ?? bio);
-      setMessage("Описание сохранено");
-    } catch {
-      setMessage("Сеть недоступна");
-    } finally {
-      setPending(false);
-    }
-  }
-
   async function changePassword() {
     setPasswordMsg("");
     if (newPassword !== repeatPassword) {
