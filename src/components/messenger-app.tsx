@@ -628,7 +628,3 @@ function Conversation({
     </>
   );
 }
-    </form>
-    </>
-  );
-}
