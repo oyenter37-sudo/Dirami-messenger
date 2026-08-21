@@ -32,4 +32,9 @@ export type ChatMessage = {
     senderId: string;
     nickname: string;
   } | null;
+  reactions: {
+    emoji: string;
+    count: number;
+    mine: boolean;
+  }[];
 };

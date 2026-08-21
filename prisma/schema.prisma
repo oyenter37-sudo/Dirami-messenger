@@ -15,6 +15,7 @@ model User {
   createdAt        DateTime  @default(now())
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
+  reactions        Reaction[]
 }
 
 model Message {
@@ -29,8 +30,22 @@ model Message {
   receiver   User      @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   replyTo    Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
   replies    Message[] @relation("MessageReplies")
+  reactions  Reaction[]
 
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, readAt])
   @@index([replyToId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  emoji     String
+  createdAt DateTime @default(now())
+  userId    String
+  messageId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@index([messageId])
 }

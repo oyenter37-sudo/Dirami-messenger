@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { avatarColor, initials } from "@/lib/avatar";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SettingsPanel } from "@/components/settings-panel";
+import { REACTIONS } from "@/lib/reactions";
 import type { ChatMessage, ChatPreview, SessionUser } from "@/lib/types";
 
 type Props = {
@@ -264,12 +265,33 @@ function Conversation({
     }
   }
 
-  function openMenu(id: string, x: number, y: number) {
-    setMenu({
-      id,
-      x: Math.min(Math.max(12, x), window.innerWidth - 168),
-      y: Math.min(Math.max(12, y), window.innerHeight - 108),
-    });
+  function openMenu(id: string, x: number, y: number, mine: boolean) {
+    window.getSelection()?.removeAllRanges();
+    const width = 228;
+    const height = 278;
+    let left = mine ? x - width + 12 : x - 12;
+    let top = y - 64;
+    left = Math.min(Math.max(10, left), window.innerWidth - width - 10);
+    top = Math.min(Math.max(10, top), window.innerHeight - height - 10);
+    setMenu({ id, x: left, y: top });
+  }
+
+  async function react(messageId: string, emoji: string) {
+    setMenu(null);
+    try {
+      const response = await fetch("/api/messages/react", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messageId, emoji }),
+      });
+      const data = (await response.json()) as { message?: ChatMessage };
+      if (!response.ok || !data.message) return;
+      setMessages((current) =>
+        current.map((item) => (item.id === data.message!.id ? data.message! : item)),
+      );
+    } catch {
+      /* ignore */
+    }
   }
 
   useEffect(() => {
@@ -404,7 +426,7 @@ function Conversation({
       </header>
 
       <div
-        className="scrollbar-thin flex-1 space-y-2 overflow-y-auto px-4 py-4"
+        className="chat-wallpaper scrollbar-thin flex-1 space-y-2 overflow-y-auto px-4 py-4"
         onClick={() => setMenu(null)}
       >
         {messages.length === 0 ? (
@@ -430,7 +452,7 @@ function Conversation({
                   }`}
                   onContextMenu={(event) => {
                     event.preventDefault();
-                    openMenu(message.id, event.clientX, event.clientY);
+                    openMenu(message.id, event.clientX, event.clientY, mine);
                   }}
                   onPointerDown={(event) => {
                     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -439,7 +461,8 @@ function Conversation({
                     const x = event.clientX;
                     const y = event.clientY;
                     pressTimer.current = window.setTimeout(() => {
-                      openMenu(message.id, x, y);
+                      window.getSelection()?.removeAllRanges();
+                      openMenu(message.id, x, y, mine);
                     }, 430);
                   }}
                   onPointerUp={clearPress}
@@ -468,6 +491,25 @@ function Conversation({
                   <p className={`mt-1 text-[10px] ${mine ? "opacity-70" : "text-[var(--muted-2)]"}`}>
                     {formatTime(message.createdAt)}
                   </p>
+                  {message.reactions?.length ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {message.reactions.map((reaction) => (
+                        <span
+                          key={reaction.emoji}
+                          className={`rounded-full px-1.5 py-0.5 text-[11px] ${
+                            reaction.mine
+                              ? "bg-white/25"
+                              : mine
+                                ? "bg-black/10"
+                                : "bg-black/20"
+                          }`}
+                        >
+                          {reaction.emoji}
+                          {reaction.count > 1 ? ` ${reaction.count}` : ""}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             );

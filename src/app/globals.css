@@ -157,10 +157,12 @@ input:focus {
   background-color: var(--accent-hover);
 }
 
-.no-select {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
+.no-select,
+.no-select * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .glass {
@@ -271,39 +273,10 @@ input:focus {
   }
 }
 
-@keyframes menu-overlay {
-  from {
-    opacity: 0;
-    backdrop-filter: blur(0);
-  }
-  to {
-    opacity: 1;
-    backdrop-filter: blur(18px);
-  }
-}
-
 @keyframes menu-pop {
-  0% {
-    opacity: 0;
-    transform: translateY(28px) scale(0.72);
-    filter: blur(16px);
-  }
-  58% {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(-10px) scale(1.06);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-    filter: none;
-  }
-}
-
-@keyframes menu-btn {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.9);
+    transform: scale(0.94);
   }
   to {
     opacity: 1;

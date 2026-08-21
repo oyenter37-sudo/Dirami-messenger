@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireSession } from "@/lib/api";
 import { parseMessageContent } from "@/lib/validators";
-import type { ChatMessage } from "@/lib/types";
+import { serializeMessage } from "@/lib/serialize-message";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const replyInclude = {
+const messageInclude = {
   replyTo: {
     select: {
       id: true,
@@ -16,37 +16,10 @@ const replyInclude = {
       sender: { select: { nickname: true } },
     },
   },
+  reactions: {
+    select: { emoji: true, userId: true },
+  },
 } as const;
-
-function serialize(message: {
-  id: string;
-  content: string;
-  createdAt: Date;
-  senderId: string;
-  receiverId: string;
-  replyTo: {
-    id: string;
-    content: string;
-    senderId: string;
-    sender: { nickname: string };
-  } | null;
-}): ChatMessage {
-  return {
-    id: message.id,
-    content: message.content,
-    createdAt: message.createdAt.toISOString(),
-    senderId: message.senderId,
-    receiverId: message.receiverId,
-    replyTo: message.replyTo
-      ? {
-          id: message.replyTo.id,
-          content: message.replyTo.content,
-          senderId: message.replyTo.senderId,
-          nickname: message.replyTo.sender.nickname,
-        }
-      : null,
-  };
-}
 
 export async function GET(request: Request) {
   const auth = await requireSession();
@@ -88,7 +61,7 @@ export async function GET(request: Request) {
         validAfter ? { createdAt: { gt: validAfter } } : {},
       ],
     },
-    include: replyInclude,
+    include: messageInclude,
     orderBy: { createdAt: "asc" },
     take: 200,
   });
@@ -104,7 +77,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     peer,
-    messages: messages.map(serialize),
+    messages: messages.map((message) => serializeMessage(message, me)),
   });
 }
 
@@ -171,8 +144,8 @@ export async function POST(request: Request) {
       receiverId: peerId,
       replyToId,
     },
-    include: replyInclude,
+    include: messageInclude,
   });
 
-  return NextResponse.json({ message: serialize(message) });
+  return NextResponse.json({ message: serializeMessage(message, me) });
 }
