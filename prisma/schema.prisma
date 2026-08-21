@@ -16,6 +16,7 @@ model User {
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
   reactions        Reaction[]
+  nfts             Nft[]
 }
 
 model Message {
@@ -48,4 +49,16 @@ model Reaction {
 
   @@unique([userId, messageId])
   @@index([messageId])
+}
+
+model Nft {
+  id        String   @id @default(cuid())
+  name      String
+  imageUrl  String
+  valueRub  Int
+  createdAt DateTime @default(now())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
 }

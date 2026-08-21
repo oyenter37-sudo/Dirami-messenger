@@ -12,7 +12,16 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: auth.session.userId },
-    select: { id: true, nickname: true, bio: true },
+    select: {
+      id: true,
+      nickname: true,
+      bio: true,
+      createdAt: true,
+      nfts: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, name: true, imageUrl: true, valueRub: true },
+      },
+    },
   });
   if (!user) {
     return jsonError("Нужно войти", 401);

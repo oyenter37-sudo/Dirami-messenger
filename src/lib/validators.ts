@@ -26,3 +26,14 @@ export function parseMessageContent(value: unknown) {
   if (content.length < 1 || content.length > 2000) return null;
   return content;
 }
+
+export function parseHttpUrl(value: unknown) {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}

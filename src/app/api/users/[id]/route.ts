@@ -15,7 +15,16 @@ export async function GET(
   const { id } = await context.params;
   const user = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, nickname: true, bio: true },
+    select: {
+      id: true,
+      nickname: true,
+      bio: true,
+      createdAt: true,
+      nfts: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, name: true, imageUrl: true, valueRub: true },
+      },
+    },
   });
   if (!user) {
     return jsonError("Пользователь не найден", 404);

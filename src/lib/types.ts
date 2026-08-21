@@ -3,10 +3,19 @@ export type SessionUser = {
   nickname: string;
 };
 
+export type NftItem = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  valueRub: number;
+};
+
 export type PublicUser = {
   id: string;
   nickname: string;
   bio: string;
+  createdAt?: string;
+  nfts?: NftItem[];
 };
 
 export type ChatPreview = {

@@ -26,7 +26,7 @@ function parseText(text: string, key: string): ReactNode[] {
       nodes.push(
         <img
           alt=""
-          className="apple-emoji"
+          className="ef-sticker"
           draggable={false}
           key={`${key}-f-${part}`}
           src={EF_SRC}

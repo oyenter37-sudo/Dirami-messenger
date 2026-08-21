@@ -502,7 +502,7 @@ function Conversation({
                       </p>
                     </div>
                   ) : null}
-                  <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                  <p className="whitespace-pre-wrap break-words text-sm leading-7">
                     <RichText text={message.content} />
                   </p>
                   <p className={`mt-1 text-[10px] ${mine ? "opacity-70" : "text-[var(--muted-2)]"}`}>
@@ -625,6 +625,10 @@ function Conversation({
           </button>
         </div>
       </form>
+    </>
+  );
+}
+    </form>
     </>
   );
 }
