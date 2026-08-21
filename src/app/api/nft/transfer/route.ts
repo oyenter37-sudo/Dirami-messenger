@@ -30,7 +30,9 @@ export async function POST(request: Request) {
 
   const [nft, recipient] = await Promise.all([
     prisma.nft.findUnique({ where: { id: nftId } }),
-    prisma.user.findUnique({ where: { nickname: toNickname } }),
+    prisma.user.findFirst({
+      where: { nickname: { equals: toNickname, mode: "insensitive" } },
+    }),
   ]);
 
   if (!nft || nft.ownerId !== auth.session.userId) {
