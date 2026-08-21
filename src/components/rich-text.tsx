@@ -5,6 +5,8 @@ import { AppleEmoji } from "@/components/apple-emoji";
 import { matchEmojiAt } from "@/lib/apple-emoji";
 
 const DIRAMI = /^(dirami|дирами)/i;
+const CUSTOM_EF = "[e_f]";
+const EF_SRC = "https://i.ibb.co/4nDpk1NL/images-11.jpg";
 
 function parseText(text: string, key: string): ReactNode[] {
   const nodes: ReactNode[] = [];
