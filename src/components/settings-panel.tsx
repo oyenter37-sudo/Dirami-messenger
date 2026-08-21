@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { RichText } from "@/components/rich-text";
 import { applyTheme, readTheme, THEMES, type ThemeId } from "@/lib/theme";
 
@@ -13,10 +13,6 @@ const isAdmin = (nickname: string) => nickname.toLowerCase() === "mara";
 
 export function SettingsPanel({ nickname, onClose }: Props) {
   const [theme, setTheme] = useState<ThemeId>(readTheme);
-  const [bio, setBio] = useState("");
-  const [savedBio, setSavedBio] = useState("");
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
@@ -26,21 +22,6 @@ export function SettingsPanel({ nickname, onClose }: Props) {
   const [nftValue, setNftValue] = useState("");
   const [nftImage, setNftImage] = useState("");
   const [nftMsg, setNftMsg] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetch("/api/auth/me", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((data: { user?: { bio?: string } }) => {
-        if (cancelled || typeof data.user?.bio !== "string") return;
-        setBio(data.user.bio);
-        setSavedBio(data.user.bio);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function pickTheme(id: ThemeId) {
     setTheme(id);
@@ -181,32 +162,6 @@ export function SettingsPanel({ nickname, onClose }: Props) {
                 );
               })}
             </div>
-          </section>
-
-          <section className="rounded-3xl border border-[var(--border)] bg-[var(--panel)] p-4">
-            <p className="mb-3 text-[13px] font-semibold">Профиль</p>
-            <label className="block">
-              <span className="mb-1.5 block text-xs text-[var(--muted-2)]">Описание</span>
-              <textarea
-                className="min-h-24 w-full resize-none rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm"
-                maxLength={280}
-                onChange={(event) => setBio(event.target.value)}
-                placeholder="Коротко о себе"
-                value={bio}
-              />
-            </label>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-[11px] text-[var(--muted-2)]">{bio.length}/280</span>
-              <button
-                className="hover-accent rounded-full bg-accent px-4 py-2 text-xs font-semibold text-on-accent disabled:opacity-50"
-                disabled={pending || bio === savedBio}
-                onClick={() => void saveBio()}
-                type="button"
-              >
-                Сохранить
-              </button>
-            </div>
-            {message ? <p className="mt-2 text-xs text-[var(--muted-2)]">{message}</p> : null}
           </section>
 
           <section className="rounded-3xl border border-[var(--border)] bg-[var(--panel)] p-4">

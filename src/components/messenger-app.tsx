@@ -113,6 +113,13 @@ export function MessengerApp({ me }: Props) {
           <div className="flex items-center gap-1">
             <button
               className="rounded-full px-3 py-1.5 text-xs text-[var(--muted-2)] hover:bg-white/5"
+              onClick={() => setProfileId(me.userId)}
+              type="button"
+            >
+              Мой профиль
+            </button>
+            <button
+              className="rounded-full px-3 py-1.5 text-xs text-[var(--muted-2)] hover:bg-white/5"
               onClick={() => setSettingsOpen(true)}
               type="button"
             >
