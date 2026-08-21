@@ -234,6 +234,7 @@ export function MessengerApp({ me }: Props) {
       {profileId ? (
         <ProfileSheet
           userId={profileId}
+          meId={me.userId}
           fallback={chats.find((chat) => chat.user.id === profileId)?.user}
           onClose={() => setProfileId(null)}
         />
