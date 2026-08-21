@@ -21,6 +21,22 @@ function parseText(text: string, key: string): ReactNode[] {
   };
 
   while (cursor < text.length) {
+    if (text.startsWith(CUSTOM_EF, cursor)) {
+      flush();
+      nodes.push(
+        <img
+          alt=""
+          className="apple-emoji"
+          draggable={false}
+          key={`${key}-f-${part}`}
+          src={EF_SRC}
+        />,
+      );
+      part += 1;
+      cursor += CUSTOM_EF.length;
+      continue;
+    }
+
     const dirami = text.slice(cursor).match(DIRAMI);
     if (dirami) {
       flush();
