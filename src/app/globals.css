@@ -196,3 +196,173 @@ input:focus {
 .msg-enter {
   animation: message-in 0.32s ease-out;
 }
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes profile-in {
+  0% {
+    opacity: 0;
+    transform: translateY(48px) scale(0.84);
+    filter: blur(12px);
+  }
+  58% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(-8px) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes msg-mine {
+  0% {
+    opacity: 0;
+    transform: translate3d(36px, 18px, 0) scale(0.78);
+    filter: blur(6px);
+  }
+  62% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(-4px, -2px, 0) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes msg-theirs {
+  0% {
+    opacity: 0;
+    transform: translate3d(-36px, 18px, 0) scale(0.78);
+    filter: blur(6px);
+  }
+  62% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(4px, -2px, 0) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes menu-overlay {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(18px);
+  }
+}
+
+@keyframes menu-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.72);
+    filter: blur(16px);
+  }
+  58% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(-10px) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes menu-btn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.overlay-in {
+  animation: overlay-in 0.28s ease both;
+}
+
+.profile-in {
+  animation: profile-in 0.62s cubic-bezier(0.22, 1.15, 0.28, 1) both;
+}
+
+.sheet-in {
+  animation: sheet-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.msg-enter-mine {
+  animation: msg-mine 0.52s cubic-bezier(0.22, 1.25, 0.36, 1) both;
+}
+
+.msg-enter-theirs {
+  animation: msg-theirs 0.52s cubic-bezier(0.22, 1.25, 0.36, 1) both;
+}
+
+.menu-overlay {
+  animation: menu-overlay 0.28s ease both;
+  background: rgb(0 0 0 / 0.42);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+
+.glass-menu {
+  background: linear-gradient(
+    165deg,
+    rgb(255 255 255 / 0.16),
+    rgb(255 255 255 / 0.05) 42%,
+    color-mix(in srgb, var(--panel) 72%, transparent)
+  );
+  border: 1px solid rgb(255 255 255 / 0.22);
+  box-shadow:
+    0 40px 90px -28px rgb(0 0 0 / 0.75),
+    inset 0 1px 0 rgb(255 255 255 / 0.28);
+  backdrop-filter: blur(32px) saturate(1.8);
+}
+
+.menu-pop {
+  animation: menu-pop 0.56s cubic-bezier(0.18, 1.22, 0.32, 1) both;
+}
+
+.menu-btn {
+  animation: menu-btn 0.4s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+.menu-btn:nth-child(1) {
+  animation-delay: 0.08s;
+}
+
+.menu-btn:nth-child(2) {
+  animation-delay: 0.16s;
+}
