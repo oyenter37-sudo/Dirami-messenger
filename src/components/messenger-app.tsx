@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { avatarColor, initials } from "@/lib/avatar";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SettingsPanel } from "@/components/settings-panel";
+import { AppleEmoji } from "@/components/apple-emoji";
+import { RichText } from "@/components/rich-text";
 import { REACTIONS } from "@/lib/reactions";
 import type { ChatMessage, ChatPreview, SessionUser } from "@/lib/types";
 
@@ -100,8 +102,12 @@ export function MessengerApp({ me }: Props) {
               D
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold">Dirami</p>
-              <p className="truncate text-xs text-[var(--muted-2)]">{me.nickname}</p>
+              <p className="text-sm font-semibold">
+                <RichText text="Dirami" />
+              </p>
+              <p className="truncate text-xs text-[var(--muted-2)]">
+                <RichText text={me.nickname} />
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -162,7 +168,7 @@ export function MessengerApp({ me }: Props) {
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-medium">
-                          {chat.user.nickname}
+                          <RichText text={chat.user.nickname} />
                         </span>
                         {chat.lastMessage ? (
                           <span className="shrink-0 text-[11px] text-[var(--muted-2)]">
@@ -172,9 +178,14 @@ export function MessengerApp({ me }: Props) {
                       </span>
                       <span className="mt-0.5 flex items-center justify-between gap-2">
                         <span className="truncate text-xs text-[var(--muted-2)]">
-                          {chat.lastMessage
-                            ? `${chat.lastMessage.senderId === me.userId ? "Вы: " : ""}${previewText(chat.lastMessage.content)}`
-                            : "Нет сообщений"}
+                          {chat.lastMessage ? (
+                            <>
+                              {chat.lastMessage.senderId === me.userId ? "Вы: " : ""}
+                              <RichText text={previewText(chat.lastMessage.content)} />
+                            </>
+                          ) : (
+                            "Нет сообщений"
+                          )}
                         </span>
                         {chat.unread > 0 ? (
                           <span className="grid min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-on-accent">
@@ -419,7 +430,9 @@ function Conversation({
             {initials(peer.nickname)}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{peer.nickname}</p>
+            <p className="truncate text-sm font-semibold">
+              <RichText text={peer.nickname} />
+            </p>
             <p className="text-[11px] text-[var(--muted-2)]">профиль</p>
           </div>
         </button>
@@ -481,12 +494,16 @@ function Conversation({
                           : "border-[var(--accent)] bg-black/20"
                       }`}
                     >
-                      <p className="font-medium">{message.replyTo.nickname}</p>
-                      <p className="truncate opacity-80">{message.replyTo.content}</p>
+                      <p className="font-medium">
+                        <RichText text={message.replyTo.nickname} />
+                      </p>
+                      <p className="truncate opacity-80">
+                        <RichText text={message.replyTo.content} />
+                      </p>
                     </div>
                   ) : null}
                   <p className="whitespace-pre-wrap break-words text-sm leading-6">
-                    {message.content}
+                    <RichText text={message.content} />
                   </p>
                   <p className={`mt-1 text-[10px] ${mine ? "opacity-70" : "text-[var(--muted-2)]"}`}>
                     {formatTime(message.createdAt)}
@@ -504,7 +521,7 @@ function Conversation({
                                 : "bg-black/20"
                           }`}
                         >
-                          {reaction.emoji}
+                          <AppleEmoji emoji={reaction.emoji} />
                           {reaction.count > 1 ? ` ${reaction.count}` : ""}
                         </span>
                       ))}
@@ -533,7 +550,7 @@ function Conversation({
                   onClick={() => void react(menu.id, emoji)}
                   type="button"
                 >
-                  {emoji}
+                  <AppleEmoji emoji={emoji} />
                 </button>
               ))}
             </div>
@@ -571,7 +588,9 @@ function Conversation({
               <p className="text-[11px] font-medium text-accent-soft">
                 Ответ {replyTo.senderId === me.userId ? "себе" : peer.nickname}
               </p>
-              <p className="truncate text-xs text-[var(--muted-2)]">{replyTo.content}</p>
+              <p className="truncate text-xs text-[var(--muted-2)]">
+                <RichText text={replyTo.content} />
+              </p>
             </div>
             <button
               className="shrink-0 text-xs text-[var(--muted-2)]"

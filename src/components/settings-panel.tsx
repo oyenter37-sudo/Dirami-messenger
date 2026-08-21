@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RichText } from "@/components/rich-text";
 import { applyTheme, readTheme, THEMES, type ThemeId } from "@/lib/theme";
 
 type Props = {
@@ -67,7 +68,9 @@ export function SettingsPanel({ nickname, onClose }: Props) {
         <header className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
           <div>
             <p className="text-sm font-semibold">Настройки</p>
-            <p className="text-xs text-[var(--muted-2)]">{nickname}</p>
+            <p className="text-xs text-[var(--muted-2)]">
+              <RichText text={nickname} />
+            </p>
           </div>
           <button
             className="rounded-xl px-2 py-1 text-sm text-[var(--muted-2)] hover:bg-white/5"

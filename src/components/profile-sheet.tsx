@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { avatarColor, initials } from "@/lib/avatar";
+import { RichText } from "@/components/rich-text";
 import type { PublicUser } from "@/lib/types";
 
 type Props = {
@@ -62,7 +63,9 @@ export function ProfileSheet({ userId, fallback, onClose }: Props) {
             {initials(nickname)}
           </span>
 
-          <p className="text-2xl font-semibold tracking-tight">{nickname}</p>
+          <p className="text-2xl font-semibold tracking-tight">
+            <RichText text={nickname} />
+          </p>
           <p className="mt-0.5 text-xs tracking-wide text-[var(--muted-2)] uppercase">
             профиль
           </p>
@@ -72,7 +75,7 @@ export function ProfileSheet({ userId, fallback, onClose }: Props) {
               Описание
             </p>
             <p className="text-sm leading-6">
-              {bio.trim() ? bio : "Пока без описания"}
+              {bio.trim() ? <RichText text={bio} /> : "Пока без описания"}
             </p>
           </div>
 
