@@ -53,12 +53,12 @@ export async function GET() {
       Promise.all([
         readRateLimitUsage({
           subject: `user:${me}`,
-          action: "message",
+          action: "message_v2",
           windowMs: MINUTE,
         }),
         readRateLimitUsage({
           subject: `user:${me}`,
-          action: "chat_request",
+          action: "chat_request_v2",
           windowMs: HOUR,
         }),
         readRateLimitUsage({

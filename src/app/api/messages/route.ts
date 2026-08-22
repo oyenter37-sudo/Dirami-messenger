@@ -145,7 +145,7 @@ export async function POST(request: Request) {
   const limits = await getUserLimits(me);
   const messageLimit = await consumeRateLimit({
     subject: `user:${me}`,
-    action: "message",
+    action: "message_v2",
     limit: limits.messagesPerMinute,
     windowMs: MINUTE,
   });
@@ -209,7 +209,7 @@ export async function POST(request: Request) {
   } else {
     const requestLimit = await consumeRateLimit({
       subject: `user:${me}`,
-      action: "chat_request",
+      action: "chat_request_v2",
       limit: limits.chatRequestsPerHour,
       windowMs: HOUR,
     });
