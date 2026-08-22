@@ -59,14 +59,25 @@ export type PublicUser = {
 export type ChatState =
   "none" | "pending_out" | "pending_in" | "accepted" | "blocked";
 
+export type VoiceMessageMeta = {
+  durationMs: number;
+  mimeType: string;
+  sizeBytes: number;
+  listenedAt: string | null;
+  available: boolean;
+};
+
 export type ChatPreview = {
   user: PublicUser;
   state: Extract<ChatState, "pending_out" | "pending_in" | "accepted">;
   lastMessage: {
     id: string;
+    kind: "text" | "voice";
     content: string;
     createdAt: string;
     senderId: string;
+    voiceDurationMs: number | null;
+    voiceListenedAt: string | null;
   } | null;
   unread: number;
 };
@@ -78,16 +89,20 @@ export type UserSearchResult = {
 
 export type ChatMessage = {
   id: string;
+  kind: "text" | "voice";
   content: string;
   createdAt: string;
   senderId: string;
   receiverId: string;
+  voice: VoiceMessageMeta | null;
   replyTo: {
     id: string;
+    kind: "text" | "voice";
     content: string;
     senderId: string;
     nickname: string;
     isVerified: boolean;
+    voiceDurationMs: number | null;
   } | null;
   reactions: {
     emoji: string;

@@ -90,10 +90,14 @@ export async function GET() {
       take: 800,
       select: {
         id: true,
+        kind: true,
         content: true,
         createdAt: true,
         senderId: true,
         receiverId: true,
+        voice: {
+          select: { durationMs: true, listenedAt: true },
+        },
       },
     }),
     prisma.message.groupBy({
@@ -103,10 +107,7 @@ export async function GET() {
     }),
   ]);
 
-  const lastByPeer = new Map<
-    string,
-    { id: string; content: string; createdAt: Date; senderId: string }
-  >();
+  const lastByPeer = new Map<string, (typeof messages)[number]>();
 
   for (const message of messages) {
     const peerId =
@@ -134,9 +135,12 @@ export async function GET() {
         lastMessage: last
           ? {
               id: last.id,
+              kind: last.kind === "VOICE" ? "voice" : "text",
               content: last.content,
               createdAt: last.createdAt.toISOString(),
               senderId: last.senderId,
+              voiceDurationMs: last.voice?.durationMs ?? null,
+              voiceListenedAt: last.voice?.listenedAt?.toISOString() ?? null,
             }
           : null,
         unread: unreadByPeer.get(user.id) ?? 0,

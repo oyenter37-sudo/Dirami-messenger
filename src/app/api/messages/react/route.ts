@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireSession } from "@/lib/api";
 import { isReactionEmoji } from "@/lib/reactions";
-import { serializeMessage } from "@/lib/serialize-message";
+import { messageInclude, serializeMessage } from "@/lib/serialize-message";
 import { chatPair } from "@/lib/chat-state";
 import {
   consumeRateLimit,
@@ -101,19 +101,7 @@ export async function POST(request: Request) {
 
   const next = await prisma.message.findUnique({
     where: { id: messageId },
-    include: {
-      replyTo: {
-        select: {
-          id: true,
-          content: true,
-          senderId: true,
-          sender: {
-            select: { nickname: true, displayName: true, isVerified: true },
-          },
-        },
-      },
-      reactions: { select: { emoji: true, userId: true } },
-    },
+    include: messageInclude,
   });
   if (!next) {
     return jsonError("Сообщение не найдено", 404);

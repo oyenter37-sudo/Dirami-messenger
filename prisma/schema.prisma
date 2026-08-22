@@ -109,6 +109,11 @@ enum ChatStatus {
   DECLINED
 }
 
+enum MessageKind {
+  TEXT
+  VOICE
+}
+
 model Chat {
   id          String     @id @default(cuid())
   userAId     String
@@ -128,22 +133,37 @@ model Chat {
 }
 
 model Message {
-  id         String     @id @default(cuid())
+  id         String        @id @default(cuid())
+  kind       MessageKind   @default(TEXT)
   content    String
-  createdAt  DateTime   @default(now())
+  createdAt  DateTime      @default(now())
   readAt     DateTime?
   senderId   String
   receiverId String
   replyToId  String?
-  sender     User       @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver   User       @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
-  replyTo    Message?   @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies    Message[]  @relation("MessageReplies")
+  sender     User          @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User          @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  replyTo    Message?      @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    Message[]     @relation("MessageReplies")
   reactions  Reaction[]
+  voice      VoiceMessage?
 
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, readAt])
   @@index([replyToId])
+}
+
+model VoiceMessage {
+  messageId  String    @id
+  data       Bytes?
+  mimeType   String    @db.VarChar(100)
+  sizeBytes  Int
+  durationMs Int
+  listenedAt DateTime?
+  createdAt  DateTime  @default(now())
+  message    Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([listenedAt])
 }
 
 model Reaction {

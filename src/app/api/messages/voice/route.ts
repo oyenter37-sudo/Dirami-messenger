@@ -1,10 +1,8 @@
 import { after, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { sendPushToUser } from "@/lib/push";
 import { jsonError, requireSession } from "@/lib/api";
 import { chatPair, chatStateFor } from "@/lib/chat-state";
-import { parseMessageContent } from "@/lib/validators";
-import { messageInclude, serializeMessage } from "@/lib/serialize-message";
+import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/push";
 import {
   consumeRateLimit,
   getUserLimits,
@@ -13,125 +11,96 @@ import {
   mutationGuard,
   rateLimitResponse,
 } from "@/lib/rate-limit";
+import { messageInclude, serializeMessage } from "@/lib/serialize-message";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const MAX_AUDIO_BYTES = 1_500_000;
+const MAX_REQUEST_BYTES = 1_650_000;
+const MAX_DURATION_MS = 60_000;
+const VOICE_CONTENT = "Голосовое сообщение";
+const ALLOWED_MIME_TYPES = new Set(["audio/webm", "audio/mp4", "audio/ogg"]);
+
 class PendingRequestLimitError extends Error {}
 class ChatStateChangedError extends Error {}
 
-export async function GET(request: Request) {
-  const auth = await requireSession();
-  if (auth.error) return auth.error;
-
-  const url = new URL(request.url);
-  const peerId = url.searchParams.get("peerId");
-  const after = url.searchParams.get("after");
-
-  if (!peerId) return jsonError("Не указан собеседник", 400);
-
-  const me = auth.session.userId;
-  if (peerId === me) return jsonError("Нельзя открыть чат с собой", 400);
-
-  const limits = await getUserLimits(me);
-  const readLimit = await consumeRateLimit({
-    subject: `user:${me}`,
-    action: "message_read",
-    limit: limits.messageReadsPerMinute,
-    windowMs: MINUTE,
-  });
-  if (!readLimit.allowed) {
-    return rateLimitResponse(
-      readLimit,
-      "Слишком много проверок новых сообщений",
+function hasSupportedSignature(bytes: Uint8Array, mimeType: string) {
+  if (mimeType === "audio/webm") {
+    return (
+      bytes.length >= 4 &&
+      bytes[0] === 0x1a &&
+      bytes[1] === 0x45 &&
+      bytes[2] === 0xdf &&
+      bytes[3] === 0xa3
     );
   }
-
-  const [peer, chat] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: peerId },
-      select: { id: true, nickname: true, displayName: true, isVerified: true },
-    }),
-    prisma.chat.findUnique({
-      where: { userAId_userBId: chatPair(me, peerId) },
-      select: { status: true, initiatorId: true },
-    }),
-  ]);
-  if (!peer) return jsonError("Пользователь не найден", 404);
-
-  const state = chatStateFor(chat, me);
-  if (state === "none" || state === "blocked") {
-    return NextResponse.json({ peer, state, messages: [] });
+  if (mimeType === "audio/ogg") {
+    return (
+      bytes.length >= 4 &&
+      bytes[0] === 0x4f &&
+      bytes[1] === 0x67 &&
+      bytes[2] === 0x67 &&
+      bytes[3] === 0x53
+    );
   }
-
-  const afterDate = after ? new Date(after) : null;
-  const validAfter =
-    afterDate && !Number.isNaN(afterDate.getTime()) ? afterDate : null;
-
-  const messages = await prisma.message.findMany({
-    where: {
-      AND: [
-        {
-          OR: [
-            { senderId: me, receiverId: peerId },
-            { senderId: peerId, receiverId: me },
-          ],
-        },
-        validAfter
-          ? {
-              OR: [
-                { createdAt: { gt: validAfter } },
-                { voice: { listenedAt: { gt: validAfter } } },
-              ],
-            }
-          : {},
-      ],
-    },
-    include: messageInclude,
-    orderBy: { createdAt: "asc" },
-    take: 200,
-  });
-
-  if (state === "accepted" || state === "pending_in") {
-    await prisma.message.updateMany({
-      where: { senderId: peerId, receiverId: me, readAt: null },
-      data: { readAt: new Date() },
-    });
-  }
-
-  return NextResponse.json({
-    peer,
-    state,
-    messages: messages.map((message) => serializeMessage(message, me)),
-  });
+  return (
+    bytes.length >= 12 &&
+    bytes[4] === 0x66 &&
+    bytes[5] === 0x74 &&
+    bytes[6] === 0x79 &&
+    bytes[7] === 0x70
+  );
 }
 
 export async function POST(request: Request) {
-  const guard = mutationGuard(request);
+  const guard = mutationGuard(request, MAX_REQUEST_BYTES);
   if (guard) return guard;
 
   const auth = await requireSession();
   if (auth.error) return auth.error;
 
-  let body: unknown;
+  let form: FormData;
   try {
-    body = await request.json();
+    form = await request.formData();
   } catch {
-    return jsonError("Некорректный запрос", 400);
+    return jsonError("Некорректная запись", 400);
   }
 
-  const payload = body as {
-    peerId?: unknown;
-    content?: unknown;
-    replyToId?: unknown;
-  };
-  const peerId = typeof payload.peerId === "string" ? payload.peerId : "";
-  const content = parseMessageContent(payload.content);
+  const peerIdValue = form.get("peerId");
+  const replyToIdValue = form.get("replyToId");
+  const durationValue = form.get("durationMs");
+  const audio = form.get("audio");
+  const peerId = typeof peerIdValue === "string" ? peerIdValue : "";
   const replyToId =
-    typeof payload.replyToId === "string" ? payload.replyToId : null;
+    typeof replyToIdValue === "string" && replyToIdValue
+      ? replyToIdValue
+      : null;
+  const durationMs =
+    typeof durationValue === "string" ? Number(durationValue) : Number.NaN;
 
   if (!peerId) return jsonError("Не указан собеседник", 400);
-  if (!content) return jsonError("Сообщение пустое или слишком длинное", 400);
+  if (!(audio instanceof Blob)) return jsonError("Нет аудиозаписи", 400);
+  if (
+    !Number.isInteger(durationMs) ||
+    durationMs < 300 ||
+    durationMs > MAX_DURATION_MS
+  ) {
+    return jsonError("Голосовое сообщение должно длиться не более минуты", 400);
+  }
+  if (audio.size < 100 || audio.size > MAX_AUDIO_BYTES) {
+    return jsonError("Аудиозапись пустая или слишком большая", 413);
+  }
+
+  const mimeType = audio.type.toLowerCase().split(";", 1)[0];
+  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+    return jsonError("Этот формат аудио не поддерживается", 415);
+  }
+
+  const audioBytes = new Uint8Array(await audio.arrayBuffer());
+  if (!hasSupportedSignature(audioBytes, mimeType)) {
+    return jsonError("Файл не похож на аудиозапись", 415);
+  }
 
   const me = auth.session.userId;
   if (peerId === me) return jsonError("Нельзя написать себе", 400);
@@ -172,7 +141,6 @@ export async function POST(request: Request) {
       403,
     );
   }
-
   if (replyToId && state !== "accepted") {
     return jsonError("В запросе нельзя отвечать на сообщение", 400);
   }
@@ -191,12 +159,27 @@ export async function POST(request: Request) {
     if (!quoted) return jsonError("Сообщение для ответа не найдено", 400);
   }
 
+  const messageData = {
+    kind: "VOICE" as const,
+    content: VOICE_CONTENT,
+    senderId: me,
+    receiverId: peerId,
+    voice: {
+      create: {
+        data: audioBytes,
+        mimeType,
+        sizeBytes: audioBytes.byteLength,
+        durationMs,
+      },
+    },
+  };
+
   let message;
   let nextState: "accepted" | "pending_out";
 
   if (state === "accepted") {
     message = await prisma.message.create({
-      data: { content, senderId: me, receiverId: peerId, replyToId },
+      data: { ...messageData, replyToId },
       include: messageInclude,
     });
     nextState = "accepted";
@@ -257,7 +240,7 @@ export async function POST(request: Request) {
         }
 
         return tx.message.create({
-          data: { content, senderId: me, receiverId: peerId },
+          data: messageData,
           include: messageInclude,
         });
       });
@@ -271,7 +254,7 @@ export async function POST(request: Request) {
       if (error instanceof ChatStateChangedError) {
         return jsonError("Состояние чата изменилось. Обновите чат", 409);
       }
-      console.error("creating chat request failed", error);
+      console.error("creating voice chat request failed", error);
       return jsonError("Не удалось создать запрос. Попробуйте ещё раз", 500);
     }
     nextState = "pending_out";
@@ -284,12 +267,12 @@ export async function POST(request: Request) {
           nextState === "pending_out"
             ? `Новый запрос от @${auth.session.nickname}`
             : `@${auth.session.nickname} · Dirami`,
-        body: content,
+        body: "🎤 Голосовое сообщение",
         url: `/chat?peer=${encodeURIComponent(me)}`,
         tag: `dirami-chat-${me}`,
       });
     } catch (error) {
-      console.error("message push failed", error);
+      console.error("voice message push failed", error);
     }
   });
 

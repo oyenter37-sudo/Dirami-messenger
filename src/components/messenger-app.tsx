@@ -19,6 +19,8 @@ import { ProfileSheet } from "@/components/profile-sheet";
 import { SettingsPanel } from "@/components/settings-panel";
 import { AppleEmoji } from "@/components/apple-emoji";
 import { RichText } from "@/components/rich-text";
+import { VoiceMessagePlayer } from "@/components/voice-message-player";
+import { VoiceRecorder } from "@/components/voice-recorder";
 import { REACTIONS } from "@/lib/reactions";
 import { playMessageSound, unlockMessageSounds } from "@/lib/message-sounds";
 import type {
@@ -52,6 +54,22 @@ function formatTime(iso: string) {
 
 function previewText(content: string) {
   return content.length > 42 ? `${content.slice(0, 42)}…` : content;
+}
+
+function formatVoiceDuration(durationMs: number | null) {
+  if (!durationMs) return "0:00";
+  const seconds = Math.max(0, Math.ceil(durationMs / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function messagePreview(message: ChatPreview["lastMessage"]) {
+  if (!message) return "";
+  if (message.kind === "voice") {
+    return message.voiceListenedAt
+      ? "🎤 Голосовое · Прослушано"
+      : `🎤 Голосовое · ${formatVoiceDuration(message.voiceDurationMs)}`;
+  }
+  return previewText(message.content);
 }
 
 function messageDateLabel(iso: string) {
@@ -296,7 +314,8 @@ export function MessengerApp({
     let subscription: PushSubscription | null = null;
     try {
       const registration = await navigator.serviceWorker?.getRegistration();
-      subscription = (await registration?.pushManager.getSubscription()) ?? null;
+      subscription =
+        (await registration?.pushManager.getSubscription()) ?? null;
     } catch {
       subscription = null;
     }
@@ -447,7 +466,7 @@ export function MessengerApp({
                                 ? "Вы: "
                                 : ""}
                               <RichText
-                                text={previewText(item.lastMessage.content)}
+                                text={messagePreview(item.lastMessage)}
                               />
                             </>
                           ) : (
@@ -616,6 +635,7 @@ function Conversation({
     useState<ChatState>(initialState);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
   const [requestBusy, setRequestBusy] = useState(false);
   const [error, setError] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
@@ -699,16 +719,33 @@ function Conversation({
           setEnterIds([]);
         } else if (data.messages.length > 0) {
           const incoming = data.messages;
-          setEnterIds(incoming.map((item) => item.id));
+          const cursorTime = after ? new Date(after).getTime() : 0;
+          setEnterIds(
+            incoming
+              .filter((item) => new Date(item.createdAt).getTime() > cursorTime)
+              .map((item) => item.id),
+          );
           setMessages((current) => {
+            const updates = new Map(incoming.map((item) => [item.id, item]));
+            const merged = current.map((item) => updates.get(item.id) ?? item);
             const seen = new Set(current.map((item) => item.id));
-            const fresh = incoming.filter((item) => !seen.has(item.id));
-            return fresh.length ? [...current, ...fresh] : current;
+            return [
+              ...merged,
+              ...incoming.filter((item) => !seen.has(item.id)),
+            ];
           });
         }
 
-        const last = data.messages.at(-1);
-        if (last) afterRef.current = last.createdAt;
+        let latest = afterRef.current;
+        for (const item of data.messages) {
+          const candidates = [item.createdAt, item.voice?.listenedAt].filter(
+            (value): value is string => Boolean(value),
+          );
+          for (const candidate of candidates) {
+            if (!latest || candidate > latest) latest = candidate;
+          }
+        }
+        afterRef.current = latest;
       } catch {
         /* polling continues */
       }
@@ -728,6 +765,22 @@ function Conversation({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
+
+  function addSentMessage(message: ChatMessage, state?: ChatState) {
+    setReplyTo(null);
+    setEnterIds([message.id]);
+    setMessages((current) =>
+      current.some((item) => item.id === message.id)
+        ? current.map((item) => (item.id === message.id ? message : item))
+        : [...current, message],
+    );
+    const cursor = message.voice?.listenedAt ?? message.createdAt;
+    if (!afterRef.current || cursor > afterRef.current)
+      afterRef.current = cursor;
+    if (state) setConnectionState(state);
+    playMessageSound("send");
+    onSent();
+  }
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -762,19 +815,59 @@ function Conversation({
       }
 
       setDraft("");
-      setReplyTo(null);
-      setEnterIds([data.message.id]);
-      setMessages((current) =>
-        current.some((item) => item.id === data.message!.id)
-          ? current
-          : [...current, data.message!],
-      );
-      afterRef.current = data.message.createdAt;
-      if (data.state) setConnectionState(data.state);
-      playMessageSound("send");
-      onSent();
+      addSentMessage(data.message, data.state);
     } catch {
       setError("Сеть недоступна");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function sendVoice(blob: Blob, durationMs: number) {
+    if (sending) return false;
+    setSending(true);
+    setError("");
+    try {
+      const type = blob.type.toLowerCase();
+      const extension = type.includes("mp4")
+        ? "m4a"
+        : type.includes("ogg")
+          ? "ogg"
+          : "webm";
+      const form = new FormData();
+      form.append("peerId", peer.id);
+      form.append("durationMs", String(Math.min(60_000, durationMs)));
+      if (replyTo?.id) form.append("replyToId", replyTo.id);
+      form.append("audio", blob, `voice.${extension}`);
+
+      const response = await fetch("/api/messages/voice", {
+        method: "POST",
+        body: form,
+      });
+      const data = await readJsonResponse<{
+        message?: ChatMessage;
+        state?: ChatState;
+        error?: string;
+      }>(response);
+      if (response.status === 401) {
+        onAuthLost();
+        return false;
+      }
+      if (!data) {
+        setError(`Ошибка сервера (${response.status})`);
+        return false;
+      }
+      if (!response.ok || !data.message) {
+        setError(data.error ?? "Голосовое сообщение не отправилось");
+        return false;
+      }
+
+      setVoiceActive(false);
+      addSentMessage(data.message, data.state);
+      return true;
+    } catch {
+      setError("Сеть недоступна — запись можно отправить повторно");
+      return false;
     } finally {
       setSending(false);
     }
@@ -809,6 +902,27 @@ function Conversation({
     } finally {
       setRequestBusy(false);
     }
+  }
+
+  function voiceListened(messageId: string, listenedAt: string) {
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === messageId && message.voice
+          ? {
+              ...message,
+              voice: {
+                ...message.voice,
+                listenedAt,
+                available: false,
+              },
+            }
+          : message,
+      ),
+    );
+    if (!afterRef.current || listenedAt > afterRef.current) {
+      afterRef.current = listenedAt;
+    }
+    onSent();
   }
 
   const emptyText =
@@ -947,13 +1061,28 @@ function Conversation({
                           />
                         </p>
                         <p className="mt-0.5 truncate text-[11px] opacity-70">
-                          <RichText text={message.replyTo.content} />
+                          <RichText
+                            text={
+                              message.replyTo.kind === "voice"
+                                ? `🎤 Голосовое · ${formatVoiceDuration(message.replyTo.voiceDurationMs)}`
+                                : message.replyTo.content
+                            }
+                          />
                         </p>
                       </div>
                     ) : null}
-                    <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.55]">
-                      <RichText text={message.content} />
-                    </p>
+                    {message.kind === "voice" && message.voice ? (
+                      <VoiceMessagePlayer
+                        messageId={message.id}
+                        mine={mine}
+                        onListened={voiceListened}
+                        voice={message.voice}
+                      />
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.55]">
+                        <RichText text={message.content} />
+                      </p>
+                    )}
                     <div
                       className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] ${
                         mine
@@ -1105,7 +1234,13 @@ function Conversation({
                   Ответ {replyTo.senderId === me.userId ? "себе" : peerName}
                 </p>
                 <p className="truncate text-xs text-[var(--muted-2)]">
-                  <RichText text={replyTo.content} />
+                  <RichText
+                    text={
+                      replyTo.kind === "voice"
+                        ? `🎤 Голосовое · ${formatVoiceDuration(replyTo.voice?.durationMs ?? null)}`
+                        : replyTo.content
+                    }
+                  />
                 </p>
               </div>
               <button
@@ -1121,32 +1256,43 @@ function Conversation({
             <p className="mb-2 px-1 text-xs text-red-300">{error}</p>
           ) : null}
           <div className="flex items-end gap-2">
-            <textarea
-              className="max-h-36 min-h-12 flex-1 resize-none rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm"
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
+            {!voiceActive ? (
+              <textarea
+                className="max-h-36 min-h-12 flex-1 resize-none rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm"
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+                placeholder={
+                  connectionState === "none"
+                    ? `Первое сообщение для ${peerName}`
+                    : replyTo
+                      ? "Напишите ответ"
+                      : `Сообщение для ${peerName}`
                 }
-              }}
-              placeholder={
-                connectionState === "none"
-                  ? `Первое сообщение для ${peerName}`
-                  : replyTo
-                    ? "Напишите ответ"
-                    : `Сообщение для ${peerName}`
-              }
-              rows={1}
-              value={draft}
+                rows={1}
+                value={draft}
+              />
+            ) : null}
+            <VoiceRecorder
+              key="voice-recorder"
+              disabled={sending}
+              onActiveChange={setVoiceActive}
+              onError={setError}
+              onSend={sendVoice}
             />
-            <button
-              className="hover-accent rounded-full bg-accent px-4 py-3 text-sm font-semibold text-on-accent disabled:opacity-50"
-              disabled={sending || !draft.trim()}
-              type="submit"
-            >
-              {connectionState === "none" ? "Запрос" : "Отправить"}
-            </button>
+            {!voiceActive ? (
+              <button
+                className="hover-accent rounded-full bg-accent px-4 py-3 text-sm font-semibold text-on-accent disabled:opacity-50"
+                disabled={sending || !draft.trim()}
+                type="submit"
+              >
+                {connectionState === "none" ? "Запрос" : "Отправить"}
+              </button>
+            ) : null}
           </div>
         </form>
       )}
