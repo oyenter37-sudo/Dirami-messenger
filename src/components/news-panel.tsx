@@ -139,7 +139,7 @@ export function NewsPanel({ onClose, onUnreadChange }: Props) {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="break-words text-[15px] font-black">
-                          {item.title}
+                          <RichText text={item.title} />
                         </h3>
                         {item.unread ? (
                           <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[9px] font-black text-on-accent uppercase">

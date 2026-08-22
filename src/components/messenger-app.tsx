@@ -34,6 +34,7 @@ type Props = {
   initialProfileId?: string | null;
   initialNftId?: string | null;
   initialPeerId?: string | null;
+  initialNewsOpen?: boolean;
 };
 
 function formatTime(iso: string) {
@@ -91,6 +92,7 @@ export function MessengerApp({
   initialProfileId,
   initialNftId,
   initialPeerId,
+  initialNewsOpen,
 }: Props) {
   const router = useRouter();
   const [chats, setChats] = useState<ChatPreview[]>([]);
@@ -100,7 +102,7 @@ export function MessengerApp({
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [newsOpen, setNewsOpen] = useState(false);
+  const [newsOpen, setNewsOpen] = useState(Boolean(initialNewsOpen));
   const [newsUnread, setNewsUnread] = useState(0);
   const [limitsOpen, setLimitsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -205,10 +207,10 @@ export function MessengerApp({
   }, [initialPeerId, me.userId]);
 
   useEffect(() => {
-    if (initialProfileId || initialNftId || initialPeerId) {
+    if (initialProfileId || initialNftId || initialPeerId || initialNewsOpen) {
       window.history.replaceState(window.history.state, "", "/chat");
     }
-  }, [initialNftId, initialPeerId, initialProfileId]);
+  }, [initialNewsOpen, initialNftId, initialPeerId, initialProfileId]);
 
   useEffect(() => {
     const unlock = () => void unlockMessageSounds();
@@ -291,8 +293,21 @@ export function MessengerApp({
   }, [query]);
 
   async function logout() {
-    const response = await fetch("/api/auth/logout", { method: "POST" });
+    let subscription: PushSubscription | null = null;
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration();
+      subscription = (await registration?.pushManager.getSubscription()) ?? null;
+    } catch {
+      subscription = null;
+    }
+
+    const response = await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pushEndpoint: subscription?.endpoint }),
+    });
     if (!response.ok) throw new Error("logout failed");
+    if (subscription) await subscription.unsubscribe().catch(() => false);
     goHome();
   }
 

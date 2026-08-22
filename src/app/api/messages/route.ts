@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/push";
 import { jsonError, requireSession } from "@/lib/api";
 import { chatPair, chatStateFor } from "@/lib/chat-state";
 import { parseMessageContent } from "@/lib/validators";
@@ -284,6 +285,22 @@ export async function POST(request: Request) {
     }
     nextState = "pending_out";
   }
+
+  after(async () => {
+    try {
+      await sendPushToUser(peerId, {
+        title:
+          nextState === "pending_out"
+            ? `Новый запрос от @${auth.session.nickname}`
+            : `@${auth.session.nickname} · Dirami`,
+        body: content,
+        url: `/chat?peer=${encodeURIComponent(me)}`,
+        tag: `dirami-chat-${me}`,
+      });
+    } catch (error) {
+      console.error("message push failed", error);
+    }
+  });
 
   return NextResponse.json({
     message: serializeMessage(message, me),

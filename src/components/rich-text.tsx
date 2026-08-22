@@ -5,6 +5,8 @@ import { AppleEmoji } from "@/components/apple-emoji";
 import { matchEmojiAt } from "@/lib/apple-emoji";
 
 const DIRAMI = /^(dirami|дирами)/i;
+const MENTION = /^@([\p{L}\p{N}_]{3,24})(?![\p{L}\p{N}_])/u;
+const MENTION_CHAR = /[\p{L}\p{N}_]/u;
 const CUSTOM_EF = "[e_f]";
 const EF_SRC = "https://i.ibb.co/4nDpk1NL/images-11.jpg";
 
@@ -34,6 +36,30 @@ function parseText(text: string, key: string): ReactNode[] {
       );
       part += 1;
       cursor += CUSTOM_EF.length;
+      continue;
+    }
+
+    const previous = cursor > 0 ? text[cursor - 1] : "";
+    const mention =
+      text[cursor] === "@" && (!previous || !MENTION_CHAR.test(previous))
+        ? text.slice(cursor).match(MENTION)
+        : null;
+    if (mention) {
+      flush();
+      const nickname = mention[1];
+      nodes.push(
+        <a
+          className="font-bold text-accent-soft underline decoration-accent-soft/35 underline-offset-2 transition hover:brightness-125"
+          href={`/u/u/@${encodeURIComponent(nickname)}`}
+          key={`${key}-u-${part}`}
+          onClick={(event) => event.stopPropagation()}
+          title={`Открыть профиль @${nickname}`}
+        >
+          {mention[0]}
+        </a>,
+      );
+      part += 1;
+      cursor += mention[0].length;
       continue;
     }
 
@@ -95,8 +121,24 @@ function parseMarkdown(text: string, key: string): ReactNode[] {
   };
 
   while (cursor < text.length) {
+    const previous = cursor > 0 ? text[cursor - 1] : "";
+    const mention =
+      text[cursor] === "@" && (!previous || !MENTION_CHAR.test(previous))
+        ? text.slice(cursor).match(MENTION)
+        : null;
+    if (mention) {
+      flush();
+      nodes.push(...parseText(mention[0], `${key}-u${part}`));
+      part += 1;
+      cursor += mention[0].length;
+      continue;
+    }
+
     if (text.startsWith("**", cursor) && wrap("**", "font-bold", 2)) continue;
-    if (text.startsWith("__", cursor) && wrap("__", "underline underline-offset-2", 2)) {
+    if (
+      text.startsWith("__", cursor) &&
+      wrap("__", "underline underline-offset-2", 2)
+    ) {
       continue;
     }
     if (text[cursor] === "*" && wrap("*", "italic", 1)) continue;

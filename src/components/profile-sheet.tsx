@@ -421,7 +421,7 @@ export function ProfileSheet({
                         </button>
                         <div className="px-2 pt-2.5 pb-1.5">
                           <p className="truncate text-[13px] font-bold leading-5">
-                            {group.name}
+                            <RichText text={group.name} />
                           </p>
                           <p className="mt-0.5 truncate text-[11px] font-medium text-amber-200/90">
                             ≈ {price}

@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { jsonError, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { sendPushToAll } from "@/lib/push";
 import {
   consumeRateLimit,
   HOUR,
@@ -72,6 +73,19 @@ export async function POST(request: Request) {
         },
       },
     });
+  });
+
+  after(async () => {
+    try {
+      await sendPushToAll({
+        title: `Новости Dirami · ${title}`,
+        body: content,
+        url: "/chat?news=1",
+        tag: `dirami-news-${news.id}`,
+      });
+    } catch (error) {
+      console.error("news push failed", error);
+    }
   });
 
   return NextResponse.json({ news });

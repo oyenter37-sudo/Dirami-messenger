@@ -13,6 +13,7 @@ export default async function ChatPage({
     profile?: string | string[];
     nft?: string | string[];
     peer?: string | string[];
+    news?: string | string[];
   }>;
 }) {
   const params = await searchParams;
@@ -28,6 +29,7 @@ export default async function ChatPage({
     typeof params.peer === "string" && params.peer.length <= 64
       ? params.peer
       : null;
+  const initialNewsOpen = params.news === "1";
   const session = await getSession();
   if (!session) {
     redirect("/");
@@ -48,6 +50,7 @@ export default async function ChatPage({
 
   return (
     <MessengerApp
+      initialNewsOpen={initialNewsOpen}
       initialNftId={initialNftId}
       initialPeerId={initialPeerId}
       initialProfileId={initialProfileId}

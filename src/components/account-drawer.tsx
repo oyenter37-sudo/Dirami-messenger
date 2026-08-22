@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  InstallAppMenuItem,
+  PushNotificationsMenuItem,
+} from "@/components/pwa-menu-controls";
 import { RichText } from "@/components/rich-text";
 import { UserAvatar } from "@/components/user-avatar";
 import { VerifiedName } from "@/components/verified-name";
@@ -362,6 +366,14 @@ export function AccountDrawer({
                 ›
               </span>
             </button>
+          </div>
+
+          <p className="mt-7 mb-2 px-2 text-[10px] font-bold tracking-[0.13em] text-[var(--muted-2)] uppercase">
+            Приложение
+          </p>
+          <div className="space-y-1.5">
+            <InstallAppMenuItem />
+            <PushNotificationsMenuItem />
           </div>
         </div>
 

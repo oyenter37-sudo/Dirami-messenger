@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RichText } from "@/components/rich-text";
 import { ShareLinkActions } from "@/components/share-link-actions";
 import { VerifiedName } from "@/components/verified-name";
 import type { NftDetails, NftPerson } from "@/lib/types";
@@ -98,7 +99,9 @@ export function NftDetailsModal({ nftId, onClose, onOpenProfile }: Props) {
                   src={nft.imageUrl}
                 />
                 <div className="p-4">
-                  <h3 className="text-xl font-black">{nft.name}</h3>
+                  <h3 className="text-xl font-black">
+                    <RichText text={nft.name} />
+                  </h3>
                   <p className="mt-1 text-sm font-black text-amber-200">
                     {nft.valueRub.toLocaleString("ru-RU")} ₽
                   </p>
