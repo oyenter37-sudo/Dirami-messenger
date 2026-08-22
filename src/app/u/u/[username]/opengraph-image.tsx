@@ -171,6 +171,7 @@ export default async function UserOpenGraphImage({
           <div
             style={{
               color: accent,
+              display: "flex",
               fontSize: 32,
               fontWeight: 800,
               marginTop: 8,
