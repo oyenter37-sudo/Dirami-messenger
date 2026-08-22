@@ -107,7 +107,9 @@ export async function POST(request: Request) {
           id: true,
           content: true,
           senderId: true,
-          sender: { select: { nickname: true, displayName: true } },
+          sender: {
+            select: { nickname: true, displayName: true, isVerified: true },
+          },
         },
       },
       reactions: { select: { emoji: true, userId: true } },

@@ -34,13 +34,18 @@ export async function PATCH(
   const payload = body as {
     nickname?: unknown;
     displayName?: unknown;
+    isVerified?: unknown;
     limits?: Partial<Record<UserLimitKey, unknown>>;
   };
   const nickname = parseNickname(payload.nickname);
   const displayName = parseDisplayName(payload.displayName);
+  const isVerified = payload.isVerified;
   if (!nickname)
     return jsonError("Юзернейм: 3–24 символа, буквы, цифры или _", 400);
   if (!displayName) return jsonError("Имя: 1–40 символов", 400);
+  if (typeof isVerified !== "boolean") {
+    return jsonError("Некорректный статус верификации", 400);
+  }
 
   const limits = { ...DEFAULT_USER_LIMITS } as UserLimits;
   for (const definition of USER_LIMIT_DEFINITIONS) {
@@ -72,13 +77,14 @@ export async function PATCH(
     const [user] = await prisma.$transaction([
       prisma.user.update({
         where: { id },
-        data: { nickname, displayName },
+        data: { nickname, displayName, isVerified },
         select: {
           id: true,
           nickname: true,
           displayName: true,
           avatarUrl: true,
           isAdmin: true,
+          isVerified: true,
           createdAt: true,
         },
       }),

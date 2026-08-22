@@ -13,6 +13,7 @@ import { AccountDrawer } from "@/components/account-drawer";
 import { LimitsPanel } from "@/components/limits-panel";
 import { NewsPanel } from "@/components/news-panel";
 import { UserAvatar } from "@/components/user-avatar";
+import { VerifiedName } from "@/components/verified-name";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SettingsPanel } from "@/components/settings-panel";
 import { AppleEmoji } from "@/components/apple-emoji";
@@ -356,9 +357,11 @@ export function MessengerApp({ me }: Props) {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-medium">
-                          <RichText
-                            text={item.user.displayName || item.user.nickname}
+                        <span className="min-w-0 truncate text-sm font-medium">
+                          <VerifiedName
+                            isVerified={item.user.isVerified}
+                            name={item.user.displayName || item.user.nickname}
+                            truncate
                           />
                         </span>
                         {item.lastMessage ? (
@@ -435,6 +438,7 @@ export function MessengerApp({ me }: Props) {
       {accountOpen ? (
         <AccountDrawer
           displayName={me.displayName}
+          isVerified={me.isVerified}
           newsUnread={newsUnread}
           nickname={me.nickname}
           onClose={() => setAccountOpen(false)}
@@ -475,6 +479,7 @@ export function MessengerApp({ me }: Props) {
       {settingsOpen ? (
         <SettingsPanel
           isAdmin={Boolean(me.isAdmin)}
+          isVerified={Boolean(me.isVerified)}
           nickname={me.nickname}
           onClose={() => setSettingsOpen(false)}
         />
@@ -509,6 +514,7 @@ function Conversation({
     id: string;
     nickname: string;
     displayName: string;
+    isVerified: boolean;
     avatarUrl: string;
   };
   initialState: ChatState;
@@ -751,7 +757,11 @@ function Conversation({
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">
-              <RichText text={peerName} />
+              <VerifiedName
+                isVerified={peer.isVerified}
+                name={peerName}
+                truncate
+              />
             </p>
             <p className="text-[11px] text-[var(--muted-2)]">
               {connectionState === "accepted"
@@ -844,7 +854,10 @@ function Conversation({
                         }`}
                       >
                         <p className="text-[11px] font-bold">
-                          <RichText text={message.replyTo.nickname} />
+                          <VerifiedName
+                            isVerified={message.replyTo.isVerified}
+                            name={message.replyTo.nickname}
+                          />
                         </p>
                         <p className="mt-0.5 truncate text-[11px] opacity-70">
                           <RichText text={message.replyTo.content} />

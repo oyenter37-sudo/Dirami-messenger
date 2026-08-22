@@ -25,7 +25,9 @@ const messageInclude = {
       id: true,
       content: true,
       senderId: true,
-      sender: { select: { nickname: true, displayName: true } },
+      sender: {
+        select: { nickname: true, displayName: true, isVerified: true },
+      },
     },
   },
   reactions: {
@@ -63,7 +65,7 @@ export async function GET(request: Request) {
   const [peer, chat] = await Promise.all([
     prisma.user.findUnique({
       where: { id: peerId },
-      select: { id: true, nickname: true, displayName: true },
+      select: { id: true, nickname: true, displayName: true, isVerified: true },
     }),
     prisma.chat.findUnique({
       where: { userAId_userBId: chatPair(me, peerId) },

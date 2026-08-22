@@ -10,7 +10,7 @@ export type RawMessage = {
     id: string;
     content: string;
     senderId: string;
-    sender: { nickname: string; displayName: string };
+    sender: { nickname: string; displayName: string; isVerified: boolean };
   } | null;
   reactions: { emoji: string; userId: string }[];
 };
@@ -38,6 +38,7 @@ export function serializeMessage(message: RawMessage, me: string): ChatMessage {
           nickname:
             message.replyTo.sender.displayName ||
             message.replyTo.sender.nickname,
+          isVerified: message.replyTo.sender.isVerified,
         }
       : null,
     reactions: [...grouped.entries()].map(([emoji, value]) => ({

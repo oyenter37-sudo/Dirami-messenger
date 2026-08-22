@@ -4,6 +4,7 @@ export type SessionUser = {
   sessionVersion: number;
   displayName?: string;
   isAdmin?: boolean;
+  isVerified?: boolean;
 };
 
 export type NftItem = {
@@ -22,6 +23,7 @@ export type NewsItem = {
   author: {
     nickname: string;
     displayName: string;
+    isVerified: boolean;
   };
 };
 
@@ -29,6 +31,7 @@ export type PublicUser = {
   id: string;
   nickname: string;
   displayName: string;
+  isVerified: boolean;
   bio: string;
   avatarUrl: string;
   profileAccent: string;
@@ -68,6 +71,7 @@ export type ChatMessage = {
     content: string;
     senderId: string;
     nickname: string;
+    isVerified: boolean;
   } | null;
   reactions: {
     emoji: string;

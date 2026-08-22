@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { RichText } from "@/components/rich-text";
 import { UserAvatar } from "@/components/user-avatar";
+import { VerifiedName } from "@/components/verified-name";
 
 type Props = {
   nickname: string;
   displayName?: string;
+  isVerified?: boolean;
   onClose: () => void;
   newsUnread: number;
   onOpenProfile: () => void;
@@ -150,6 +152,7 @@ function MenuIcon({ name }: { name: IconName }) {
 export function AccountDrawer({
   nickname,
   displayName,
+  isVerified,
   newsUnread,
   onClose,
   onOpenProfile,
@@ -165,24 +168,34 @@ export function AccountDrawer({
   const [currentDisplayName, setCurrentDisplayName] = useState(
     displayName || nickname,
   );
+  const [currentVerified, setCurrentVerified] = useState(Boolean(isVerified));
 
   useEffect(() => {
     let cancelled = false;
     void fetch("/api/auth/me", { cache: "no-store" })
       .then((response) => response.json())
-      .then((data: { user?: { avatarUrl?: string; displayName?: string } }) => {
-        if (!cancelled) {
-          setAvatarUrl(data.user?.avatarUrl ?? "");
-          setCurrentDisplayName(
-            data.user?.displayName || displayName || nickname,
-          );
-        }
-      })
+      .then(
+        (data: {
+          user?: {
+            avatarUrl?: string;
+            displayName?: string;
+            isVerified?: boolean;
+          };
+        }) => {
+          if (!cancelled) {
+            setAvatarUrl(data.user?.avatarUrl ?? "");
+            setCurrentDisplayName(
+              data.user?.displayName || displayName || nickname,
+            );
+            setCurrentVerified(Boolean(data.user?.isVerified ?? isVerified));
+          }
+        },
+      )
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [displayName, nickname]);
+  }, [displayName, isVerified, nickname]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -247,7 +260,11 @@ export function AccountDrawer({
             />
             <div className="min-w-0">
               <p className="truncate text-sm font-extrabold">
-                <RichText text={currentDisplayName} />
+                <VerifiedName
+                  isVerified={currentVerified}
+                  name={currentDisplayName}
+                  truncate
+                />
               </p>
               <p className="truncate text-xs text-[var(--muted-2)]">
                 @{nickname}

@@ -23,6 +23,7 @@ const publicProfileSelect = {
   id: true,
   nickname: true,
   displayName: true,
+  isVerified: true,
   bio: true,
   avatarUrl: true,
   profileAccent: true,

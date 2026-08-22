@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { RichText } from "@/components/rich-text";
+import { VerifiedName } from "@/components/verified-name";
 import type { NewsItem } from "@/lib/types";
 
 type Props = {
@@ -148,7 +149,10 @@ export function NewsPanel({ onClose, onUnreadChange }: Props) {
                       </div>
                       <p className="mt-1 text-[10px] text-[var(--muted-2)]">
                         {newsDate(item.createdAt)} ·{" "}
-                        {item.author.displayName || item.author.nickname}
+                        <VerifiedName
+                          isVerified={item.author.isVerified}
+                          name={item.author.displayName || item.author.nickname}
+                        />
                       </p>
                     </div>
                   </div>

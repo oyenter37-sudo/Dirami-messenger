@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
+import { VerifiedName } from "@/components/verified-name";
 import {
   USER_LIMIT_DEFINITIONS,
   type UserLimitKey,
@@ -14,6 +15,7 @@ type AdminUser = {
   displayName: string;
   avatarUrl: string;
   isAdmin: boolean;
+  isVerified: boolean;
   createdAt: string;
   limits: UserLimits;
 };
@@ -25,6 +27,7 @@ export function AdminUserLimits() {
   const [selected, setSelected] = useState<AdminUser | null>(null);
   const [nickname, setNickname] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [isVerified, setIsVerified] = useState(false);
   const [limits, setLimits] = useState<UserLimits | null>(null);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -68,6 +71,7 @@ export function AdminUserLimits() {
     setSelected(user);
     setNickname(user.nickname);
     setDisplayName(user.displayName || user.nickname);
+    setIsVerified(user.isVerified);
     setLimits({ ...user.limits });
     setMessage("");
   }
@@ -85,7 +89,7 @@ export function AdminUserLimits() {
       const response = await fetch(`/api/admin/users/${selected.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ nickname, displayName, limits }),
+        body: JSON.stringify({ nickname, displayName, isVerified, limits }),
       });
       const data = (await response.json()) as {
         user?: AdminUser;
@@ -101,8 +105,9 @@ export function AdminUserLimits() {
       );
       setNickname(data.user.nickname);
       setDisplayName(data.user.displayName);
+      setIsVerified(data.user.isVerified);
       setLimits({ ...data.user.limits });
-      setMessage("Пользователь и лимиты обновлены");
+      setMessage("Пользователь, галочка и лимиты обновлены");
     } catch {
       setMessage("Сеть недоступна");
     } finally {
@@ -161,9 +166,17 @@ export function AdminUserLimits() {
                   nickname={user.displayName || user.nickname}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-bold">
-                    {user.displayName || user.nickname}
-                    {user.isAdmin ? " · admin" : ""}
+                  <span className="flex items-center gap-1 text-sm font-bold">
+                    <VerifiedName
+                      isVerified={user.isVerified}
+                      name={user.displayName || user.nickname}
+                      truncate
+                    />
+                    {user.isAdmin ? (
+                      <span className="shrink-0 text-[9px] text-amber-200">
+                        admin
+                      </span>
+                    ) : null}
                   </span>
                   <span className="block truncate text-[10px] text-[var(--muted-2)]">
                     @{user.nickname}
@@ -211,6 +224,24 @@ export function AdminUserLimits() {
             </label>
           </div>
 
+          <label className="mt-3 flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-sky-400/25 bg-sky-400/5 px-3.5 py-3">
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 text-[12px] font-extrabold text-sky-200">
+                Галочка верификации
+                <VerifiedName isVerified name="Пример" />
+              </span>
+              <span className="mt-0.5 block text-[10px] leading-4 text-[var(--muted-2)]">
+                Имя пользователя будет подсвечено синим во всём Dirami
+              </span>
+            </span>
+            <input
+              checked={isVerified}
+              className="size-5 shrink-0 accent-sky-400"
+              onChange={(event) => setIsVerified(event.target.checked)}
+              type="checkbox"
+            />
+          </label>
+
           <p className="mt-6 mb-2 text-[10px] font-extrabold tracking-[0.13em] text-[var(--muted-2)] uppercase">
             Все доступные лимиты
           </p>
@@ -248,7 +279,7 @@ export function AdminUserLimits() {
             onClick={() => void save()}
             type="button"
           >
-            {saving ? "Сохраняем…" : "Сохранить имя, юзернейм и лимиты"}
+            {saving ? "Сохраняем…" : "Сохранить профиль, галочку и лимиты"}
           </button>
         </div>
       ) : null}

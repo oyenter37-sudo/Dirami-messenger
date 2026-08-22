@@ -3,16 +3,22 @@
 import { useState } from "react";
 import { AdminNewsPublisher } from "@/components/admin-news-publisher";
 import { AdminUserLimits } from "@/components/admin-user-limits";
-import { RichText } from "@/components/rich-text";
+import { VerifiedName } from "@/components/verified-name";
 import { applyTheme, readTheme, THEMES, type ThemeId } from "@/lib/theme";
 
 type Props = {
   nickname: string;
   isAdmin: boolean;
+  isVerified: boolean;
   onClose: () => void;
 };
 
-export function SettingsPanel({ nickname, isAdmin, onClose }: Props) {
+export function SettingsPanel({
+  nickname,
+  isAdmin,
+  isVerified,
+  onClose,
+}: Props) {
   const [theme, setTheme] = useState<ThemeId>(readTheme);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -110,7 +116,7 @@ export function SettingsPanel({ nickname, isAdmin, onClose }: Props) {
           <div>
             <p className="text-[17px] font-bold">Настройки</p>
             <p className="text-xs text-[var(--muted-2)]">
-              <RichText text={nickname} />
+              <VerifiedName isVerified={isVerified} name={nickname} />
               {isAdmin ? " · админ" : ""}
             </p>
           </div>

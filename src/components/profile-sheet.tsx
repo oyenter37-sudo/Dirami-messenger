@@ -4,6 +4,7 @@ import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { ProfileEditor } from "@/components/profile-editor";
 import { RichText } from "@/components/rich-text";
 import { UserAvatar } from "@/components/user-avatar";
+import { VerifiedName } from "@/components/verified-name";
 import {
   normalizeProfileAccent,
   normalizeProfileBackground,
@@ -18,6 +19,7 @@ type Props = {
     PublicUser,
     | "nickname"
     | "displayName"
+    | "isVerified"
     | "bio"
     | "avatarUrl"
     | "profileAccent"
@@ -46,6 +48,7 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
           id: userId,
           nickname: fallback.nickname,
           displayName: fallback.displayName,
+          isVerified: fallback.isVerified,
           bio: fallback.bio,
           avatarUrl: fallback.avatarUrl,
           profileAccent: fallback.profileAccent,
@@ -100,6 +103,7 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
 
   const nickname = user?.nickname ?? fallback?.nickname ?? "…";
   const displayName = user?.displayName || fallback?.displayName || nickname;
+  const isVerified = user?.isVerified ?? fallback?.isVerified ?? false;
   const bio = user?.bio ?? fallback?.bio ?? "";
   const avatarUrl = user?.avatarUrl ?? fallback?.avatarUrl ?? "";
   const accent = normalizeProfileAccent(
@@ -236,7 +240,11 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <h1 className="truncate text-[27px] leading-8 font-black tracking-[-0.03em] sm:text-[30px]">
-                  <RichText text={displayName} />
+                  <VerifiedName
+                    isVerified={isVerified}
+                    name={displayName}
+                    truncate
+                  />
                 </h1>
                 <p className="mt-1 text-sm font-medium text-[var(--muted-2)]">
                   @{nickname}

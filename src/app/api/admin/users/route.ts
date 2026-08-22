@@ -28,6 +28,7 @@ export async function GET(request: Request) {
       displayName: true,
       avatarUrl: true,
       isAdmin: true,
+      isVerified: true,
       createdAt: true,
       limits: true,
     },

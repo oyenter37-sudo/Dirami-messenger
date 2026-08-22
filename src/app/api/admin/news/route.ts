@@ -67,7 +67,9 @@ export async function POST(request: Request) {
         title: true,
         content: true,
         createdAt: true,
-        author: { select: { nickname: true, displayName: true } },
+        author: {
+          select: { nickname: true, displayName: true, isVerified: true },
+        },
       },
     });
   });
