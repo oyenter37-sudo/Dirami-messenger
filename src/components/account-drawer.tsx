@@ -287,7 +287,7 @@ export function AccountDrawer({
                 <MenuIcon name="news" />
                 {newsUnread > 0 ? (
                   <span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black leading-5 text-white shadow-lg">
-                    {Math.min(newsUnread, 5)}
+                    {Math.min(newsUnread, 50)}
                   </span>
                 ) : null}
               </span>

@@ -135,7 +135,7 @@ export function MessengerApp({ me }: Props) {
     }
     if (!response.ok) return;
     const data = (await response.json()) as { unreadCount?: number };
-    setNewsUnread(Math.max(0, Math.min(5, data.unreadCount ?? 0)));
+    setNewsUnread(Math.max(0, Math.min(50, data.unreadCount ?? 0)));
   }, [goHome]);
 
   const loadChats = useCallback(async () => {

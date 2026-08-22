@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   if (summaryOnly) {
     const news = await prisma.news.findMany({
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: 5,
+      take: 50,
       select: {
         id: true,
         reads: {
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
   const news = await prisma.news.findMany({
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: 5,
+    take: 50,
     select: {
       id: true,
       title: true,

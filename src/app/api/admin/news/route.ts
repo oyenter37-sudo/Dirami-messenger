@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     `;
     const stale = await tx.news.findMany({
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      skip: 4,
+      skip: 49,
       select: { id: true },
     });
     if (stale.length > 0) {

@@ -44,10 +44,10 @@ export async function POST(request: Request) {
   );
   if (
     newsIds.length === 0 ||
-    newsIds.length > 5 ||
+    newsIds.length > 50 ||
     newsIds.length !== rawIds.length
   ) {
-    return jsonError("Можно отметить от одной до пяти новостей", 400);
+    return jsonError("Можно отметить от одной до пятидесяти новостей", 400);
   }
 
   for (let attempt = 0; attempt < 2; attempt += 1) {

@@ -47,7 +47,7 @@ export function AdminNewsPublisher() {
         <div>
           <p className="text-[13px] font-semibold">Публикация новости</p>
           <p className="mt-1 text-[11px] leading-5 text-[var(--muted-2)]">
-            Новость увидят все пользователи. Хранятся только пять последних
+            Новость увидят все пользователи. Хранятся только пятьдесят последних
             публикаций.
           </p>
         </div>

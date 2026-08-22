@@ -104,7 +104,7 @@ export function NewsPanel({ onClose, onUnreadChange }: Props) {
             </span>
             <h3 className="mt-4 text-lg font-black">Что нового</h3>
             <p className="mt-1 text-xs leading-5 text-[var(--muted-2)]">
-              Здесь хранятся пять последних публикаций команды Dirami.
+              Здесь хранятся пятьдесят последних публикаций команды Dirami.
             </p>
           </div>
 
