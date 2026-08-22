@@ -75,7 +75,12 @@ export async function POST(request: Request) {
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`reaction:${me}:${messageId}`}))`;
+    await tx.$queryRaw`
+      WITH transaction_lock AS (
+        SELECT pg_advisory_xact_lock(hashtext(${`reaction:${me}:${messageId}`}::text))
+      )
+      SELECT 1::int AS "locked" FROM transaction_lock
+    `;
     const existing = await tx.reaction.findUnique({
       where: { userId_messageId: { userId: me, messageId } },
     });

@@ -223,8 +223,18 @@ export async function POST(request: Request) {
     const pair = chatPair(me, peerId);
     try {
       message = await prisma.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`chat-pair:${pair.userAId}:${pair.userBId}`}))`;
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`pending-request:${me}`}))`;
+        await tx.$queryRaw`
+          WITH transaction_lock AS (
+            SELECT pg_advisory_xact_lock(hashtext(${`chat-pair:${pair.userAId}:${pair.userBId}`}::text))
+          )
+          SELECT 1::int AS "locked" FROM transaction_lock
+        `;
+        await tx.$queryRaw`
+          WITH transaction_lock AS (
+            SELECT pg_advisory_xact_lock(hashtext(${`pending-request:${me}`}::text))
+          )
+          SELECT 1::int AS "locked" FROM transaction_lock
+        `;
 
         const currentChat = await tx.chat.findUnique({
           where: { userAId_userBId: pair },
@@ -267,7 +277,8 @@ export async function POST(request: Request) {
       if (error instanceof ChatStateChangedError) {
         return jsonError("Состояние чата изменилось. Обновите чат", 409);
       }
-      throw error;
+      console.error("creating chat request failed", error);
+      return jsonError("Не удалось создать запрос. Попробуйте ещё раз", 500);
     }
     nextState = "pending_out";
   }

@@ -65,6 +65,16 @@ function stateLabel(state: ChatState) {
   return "Можно написать";
 }
 
+async function readJsonResponse<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 type SidebarItem = UserSearchResult & {
   lastMessage: ChatPreview["lastMessage"];
   unread: number;
@@ -595,11 +605,15 @@ function Conversation({
           replyToId: replyTo?.id,
         }),
       });
-      const data = (await response.json()) as {
+      const data = await readJsonResponse<{
         message?: ChatMessage;
         state?: ChatState;
         error?: string;
-      };
+      }>(response);
+      if (!data) {
+        setError(`Ошибка сервера (${response.status})`);
+        return;
+      }
       if (!response.ok || !data.message) {
         setError(data.error ?? "Не отправилось");
         return;
@@ -634,10 +648,14 @@ function Conversation({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ peerId: peer.id, action }),
       });
-      const data = (await response.json()) as {
+      const data = await readJsonResponse<{
         error?: string;
         state?: ChatState;
-      };
+      }>(response);
+      if (!data) {
+        setError(`Ошибка сервера (${response.status})`);
+        return;
+      }
       if (!response.ok) {
         setError(data.error ?? "Не удалось обработать запрос");
         return;
