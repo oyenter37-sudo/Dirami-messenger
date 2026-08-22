@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       imageUrl,
       valueRub,
       ownerId: auth.session.userId,
+      creatorId: auth.session.userId,
     })),
   });
 

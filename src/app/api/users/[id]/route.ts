@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireSession } from "@/lib/api";
+import { chatPair, chatStateFor } from "@/lib/chat-state";
 import {
   consumeRateLimit,
   getUserLimits,
@@ -33,27 +34,37 @@ export async function GET(
   }
 
   const { id } = await context.params;
-  const user = await prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      nickname: true,
-      displayName: true,
-      isVerified: true,
-      bio: true,
-      avatarUrl: true,
-      profileAccent: true,
-      profileBackground: true,
-      createdAt: true,
-      nfts: {
-        orderBy: { createdAt: "desc" },
-        select: { id: true, name: true, imageUrl: true, valueRub: true },
+  const pair = chatPair(auth.session.userId, id);
+  const [user, chat] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nickname: true,
+        displayName: true,
+        isVerified: true,
+        bio: true,
+        avatarUrl: true,
+        profileAccent: true,
+        profileBackground: true,
+        createdAt: true,
+        nfts: {
+          orderBy: { createdAt: "desc" },
+          select: { id: true, name: true, imageUrl: true, valueRub: true },
+        },
       },
-    },
-  });
+    }),
+    prisma.chat.findUnique({
+      where: { userAId_userBId: pair },
+      select: { status: true, initiatorId: true },
+    }),
+  ]);
   if (!user) {
     return jsonError("Пользователь не найден", 404);
   }
 
-  return NextResponse.json({ user });
+  return NextResponse.json({
+    user,
+    state: chatStateFor(chat, auth.session.userId),
+  });
 }

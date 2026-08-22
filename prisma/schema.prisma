@@ -8,26 +8,29 @@ datasource db {
 }
 
 model User {
-  id                String     @id @default(cuid())
-  nickname          String     @unique
-  displayName       String     @default("")
+  id                String        @id @default(cuid())
+  nickname          String        @unique
+  displayName       String        @default("")
   passwordHash      String
-  isAdmin           Boolean    @default(false)
-  isVerified        Boolean    @default(false)
-  sessionVersion    Int        @default(0)
-  bio               String     @default("")
-  avatarUrl         String     @default("")
-  profileAccent     String     @default("#4fbfa8")
-  profileBackground String     @default("aurora")
-  createdAt         DateTime   @default(now())
-  sentMessages      Message[]  @relation("SentMessages")
-  receivedMessages  Message[]  @relation("ReceivedMessages")
+  isAdmin           Boolean       @default(false)
+  isVerified        Boolean       @default(false)
+  sessionVersion    Int           @default(0)
+  bio               String        @default("")
+  avatarUrl         String        @default("")
+  profileAccent     String        @default("#4fbfa8")
+  profileBackground String        @default("aurora")
+  createdAt         DateTime      @default(now())
+  sentMessages      Message[]     @relation("SentMessages")
+  receivedMessages  Message[]     @relation("ReceivedMessages")
   reactions         Reaction[]
-  nfts              Nft[]
-  chatsAsA          Chat[]     @relation("ChatUserA")
-  chatsAsB          Chat[]     @relation("ChatUserB")
-  initiatedChats    Chat[]     @relation("ChatInitiator")
-  authoredNews      News[]     @relation("NewsAuthor")
+  nfts              Nft[]         @relation("NftOwner")
+  createdNfts       Nft[]         @relation("NftCreator")
+  nftTransfersSent  NftTransfer[] @relation("NftTransferFrom")
+  nftTransfersGot   NftTransfer[] @relation("NftTransferTo")
+  chatsAsA          Chat[]        @relation("ChatUserA")
+  chatsAsB          Chat[]        @relation("ChatUserB")
+  initiatedChats    Chat[]        @relation("ChatInitiator")
+  authoredNews      News[]        @relation("NewsAuthor")
   newsReads         NewsRead[]
   limits            UserLimit?
 }
@@ -143,13 +146,32 @@ model Reaction {
 }
 
 model Nft {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   name      String
   imageUrl  String
   valueRub  Int
-  createdAt DateTime @default(now())
+  createdAt DateTime      @default(now())
   ownerId   String
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  creatorId String?
+  owner     User          @relation("NftOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  creator   User?         @relation("NftCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  transfers NftTransfer[]
 
   @@index([ownerId])
+  @@index([creatorId])
+}
+
+model NftTransfer {
+  id         String   @id @default(cuid())
+  nftId      String
+  fromUserId String
+  toUserId   String
+  createdAt  DateTime @default(now())
+  nft        Nft      @relation(fields: [nftId], references: [id], onDelete: Cascade)
+  fromUser   User     @relation("NftTransferFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser     User     @relation("NftTransferTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([nftId, createdAt])
+  @@index([fromUserId])
+  @@index([toUserId])
 }

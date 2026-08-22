@@ -1,7 +1,9 @@
 "use client";
 
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { NftDetailsModal } from "@/components/nft-details-modal";
 import { ProfileEditor } from "@/components/profile-editor";
+import { ShareLinkActions } from "@/components/share-link-actions";
 import { RichText } from "@/components/rich-text";
 import { UserAvatar } from "@/components/user-avatar";
 import { VerifiedName } from "@/components/verified-name";
@@ -10,7 +12,13 @@ import {
   normalizeProfileBackground,
   profileBackgroundCss,
 } from "@/lib/profile-customization";
-import type { NftItem, PublicUser } from "@/lib/types";
+import type {
+  ChatState,
+  NftItem,
+  NftPerson,
+  PublicUser,
+  UserSearchResult,
+} from "@/lib/types";
 
 type Props = {
   userId: string;
@@ -25,7 +33,10 @@ type Props = {
     | "profileAccent"
     | "profileBackground"
   >;
+  fallbackState?: ChatState;
   onClose: () => void;
+  onMessage?: (target: UserSearchResult) => void;
+  onOpenLinkedProfile?: (user: NftPerson) => void;
 };
 
 type NftGroup = {
@@ -41,7 +52,15 @@ function nftGroupKey(nft: NftItem) {
   return JSON.stringify([nft.name, nft.imageUrl]);
 }
 
-export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
+export function ProfileSheet({
+  userId,
+  meId,
+  fallback,
+  fallbackState = "none",
+  onClose,
+  onMessage,
+  onOpenLinkedProfile,
+}: Props) {
   const [user, setUser] = useState<PublicUser | null>(
     fallback
       ? {
@@ -57,7 +76,10 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
         }
       : null,
   );
+  const [relationshipState, setRelationshipState] =
+    useState<ChatState>(fallbackState);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [nftDetailId, setNftDetailId] = useState<string | null>(null);
   const [detailsKey, setDetailsKey] = useState<string | null>(null);
   const [transfer, setTransfer] = useState<{
     nft: NftItem;
@@ -70,16 +92,21 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
 
   async function reload() {
     const response = await fetch(`/api/users/${userId}`, { cache: "no-store" });
-    const data = (await response.json()) as { user?: PublicUser };
+    const data = (await response.json()) as {
+      user?: PublicUser;
+      state?: ChatState;
+    };
     if (data.user) setUser(data.user);
+    if (data.state) setRelationshipState(data.state);
   }
 
   useEffect(() => {
     let cancelled = false;
     void fetch(`/api/users/${userId}`, { cache: "no-store" })
       .then((response) => response.json())
-      .then((data: { user?: PublicUser }) => {
+      .then((data: { user?: PublicUser; state?: ChatState }) => {
         if (!cancelled && data.user) setUser(data.user);
+        if (!cancelled && data.state) setRelationshipState(data.state);
       })
       .catch(() => undefined);
     return () => {
@@ -264,6 +291,24 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
               </span>
             </div>
 
+            <div className="mt-5 space-y-2">
+              {!mine && user && onMessage ? (
+                <button
+                  className="hover-accent w-full rounded-full bg-accent py-3 text-sm font-black text-on-accent"
+                  onClick={() => onMessage({ user, state: relationshipState })}
+                  type="button"
+                >
+                  Сообщение
+                </button>
+              ) : null}
+              {user ? (
+                <ShareLinkActions
+                  path={`/u/u/@${encodeURIComponent(nickname)}`}
+                  title={`Профиль ${displayName}`}
+                />
+              ) : null}
+            </div>
+
             <div className="mt-4 flex flex-wrap gap-2">
               {joined ? (
                 <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1.5 text-[11px] text-[var(--muted)]">
@@ -354,10 +399,12 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                           aria-label={
                             multiple ? `Открыть ${group.name}` : group.name
                           }
-                          className={`relative block aspect-square w-full overflow-hidden rounded-[1.1rem] text-left ${
-                            multiple ? "cursor-pointer" : "cursor-default"
-                          }`}
-                          onClick={() => multiple && setDetailsKey(group.key)}
+                          className="relative block aspect-square w-full cursor-pointer overflow-hidden rounded-[1.1rem] text-left"
+                          onClick={() =>
+                            multiple
+                              ? setDetailsKey(group.key)
+                              : setNftDetailId(nft.id)
+                          }
                           type="button"
                         >
                           <img
@@ -389,17 +436,30 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                             <span>Подробнее</span>
                             <span>→</span>
                           </button>
-                        ) : mine ? (
-                          <button
-                            className="mt-1 w-full rounded-2xl px-3 py-2.5 text-center text-[12px] font-semibold text-[var(--muted)] hover:bg-white/5 hover:text-white"
-                            onClick={() =>
-                              setTransfer({ nft, to: "", step: 1 })
-                            }
-                            type="button"
+                        ) : (
+                          <div
+                            className={`mt-1 grid gap-1 ${mine ? "grid-cols-2" : "grid-cols-1"}`}
                           >
-                            Передать
-                          </button>
-                        ) : null}
+                            <button
+                              className="profile-accent-soft profile-accent-text rounded-2xl px-2 py-2.5 text-[11px] font-extrabold hover:brightness-110"
+                              onClick={() => setNftDetailId(nft.id)}
+                              type="button"
+                            >
+                              Подробнее
+                            </button>
+                            {mine ? (
+                              <button
+                                className="rounded-2xl px-2 py-2.5 text-[11px] font-semibold text-[var(--muted)] hover:bg-white/5 hover:text-white"
+                                onClick={() =>
+                                  setTransfer({ nft, to: "", step: 1 })
+                                }
+                                type="button"
+                              >
+                                Передать
+                              </button>
+                            ) : null}
+                          </div>
+                        )}
                       </article>
                     );
                   })}
@@ -519,21 +579,43 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                           ID · {nft.id.slice(-10)}
                         </p>
                       </div>
-                      {mine ? (
+                      <div className="flex shrink-0 flex-col gap-1">
                         <button
-                          className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2 text-[11px] font-bold hover:border-white/20"
-                          onClick={() => setTransfer({ nft, to: "", step: 1 })}
+                          className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[11px] font-bold hover:border-white/20"
+                          onClick={() => setNftDetailId(nft.id)}
                           type="button"
                         >
-                          Передать
+                          Подробнее
                         </button>
-                      ) : null}
+                        {mine ? (
+                          <button
+                            className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[11px] font-bold hover:border-white/20"
+                            onClick={() =>
+                              setTransfer({ nft, to: "", step: 1 })
+                            }
+                            type="button"
+                          >
+                            Передать
+                          </button>
+                        ) : null}
+                      </div>
                     </article>
                   ))}
                 </div>
               </div>
             </section>
           </div>
+        ) : null}
+
+        {nftDetailId ? (
+          <NftDetailsModal
+            nftId={nftDetailId}
+            onClose={() => setNftDetailId(null)}
+            onOpenProfile={(linkedUser) => {
+              setNftDetailId(null);
+              onOpenLinkedProfile?.(linkedUser);
+            }}
+          />
         ) : null}
 
         {transfer ? (

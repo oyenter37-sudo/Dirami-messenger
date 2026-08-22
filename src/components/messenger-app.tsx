@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { AccountDrawer } from "@/components/account-drawer";
 import { LimitsPanel } from "@/components/limits-panel";
 import { NewsPanel } from "@/components/news-panel";
+import { NftDetailsModal } from "@/components/nft-details-modal";
 import { UserAvatar } from "@/components/user-avatar";
 import { VerifiedName } from "@/components/verified-name";
 import { ProfileSheet } from "@/components/profile-sheet";
@@ -30,6 +31,8 @@ import type {
 
 type Props = {
   me: SessionUser;
+  initialProfileId?: string | null;
+  initialNftId?: string | null;
 };
 
 function formatTime(iso: string) {
@@ -82,7 +85,7 @@ type SidebarItem = UserSearchResult & {
   unread: number;
 };
 
-export function MessengerApp({ me }: Props) {
+export function MessengerApp({ me, initialProfileId, initialNftId }: Props) {
   const router = useRouter();
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [peerId, setPeerId] = useState<string | null>(null);
@@ -95,7 +98,10 @@ export function MessengerApp({ me }: Props) {
   const [newsUnread, setNewsUnread] = useState(0);
   const [limitsOpen, setLimitsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [profileId, setProfileId] = useState<string | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(
+    initialProfileId ?? null,
+  );
+  const [nftId, setNftId] = useState<string | null>(initialNftId ?? null);
   const lastMessageByPeerRef = useRef<Map<string, string>>(new Map());
   const chatsReadyRef = useRef(false);
 
@@ -166,6 +172,12 @@ export function MessengerApp({ me }: Props) {
     chatsReadyRef.current = true;
     setChats(data.chats);
   }, [goHome, me.userId]);
+
+  useEffect(() => {
+    if (initialProfileId || initialNftId) {
+      window.history.replaceState(window.history.state, "", "/chat");
+    }
+  }, [initialNftId, initialProfileId]);
 
   useEffect(() => {
     const unlock = () => void unlockMessageSounds();
@@ -259,6 +271,15 @@ export function MessengerApp({ me }: Props) {
     setQuery("");
   }
 
+  function openSidebarItem(item: UserSearchResult) {
+    if (item.state === "none") {
+      setOpenedUser(item);
+      setProfileId(item.user.id);
+      return;
+    }
+    openConversation(item);
+  }
+
   async function relationshipChanged(action?: "accept" | "decline") {
     await loadChats();
     if (action === "decline") {
@@ -342,7 +363,7 @@ export function MessengerApp({ me }: Props) {
                         ? "bg-accent-muted ring-1 ring-[var(--accent)]/40"
                         : "hover:bg-white/5"
                     }`}
-                    onClick={() => openConversation(item)}
+                    onClick={() => openSidebarItem(item)}
                     type="button"
                   >
                     <UserAvatar
@@ -484,15 +505,35 @@ export function MessengerApp({ me }: Props) {
           onClose={() => setSettingsOpen(false)}
         />
       ) : null}
+      {nftId ? (
+        <NftDetailsModal
+          nftId={nftId}
+          onClose={() => setNftId(null)}
+          onOpenProfile={(user) => {
+            setNftId(null);
+            setProfileId(user.id);
+          }}
+        />
+      ) : null}
       {profileId ? (
         <ProfileSheet
+          key={profileId}
           userId={profileId}
           meId={me.userId}
           fallback={
             chats.find((chat) => chat.user.id === profileId)?.user ??
             (openedUser?.user.id === profileId ? openedUser.user : undefined)
           }
+          fallbackState={
+            chats.find((chat) => chat.user.id === profileId)?.state ??
+            (openedUser?.user.id === profileId ? openedUser.state : "none")
+          }
           onClose={() => setProfileId(null)}
+          onMessage={(target) => {
+            setProfileId(null);
+            openConversation(target);
+          }}
+          onOpenLinkedProfile={(user) => setProfileId(user.id)}
         />
       ) : null}
     </div>

@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 
 type Mode = "login" | "register";
 
-export function AuthWindow() {
+type Props = {
+  nextPath?: string;
+};
+
+export function AuthWindow({ nextPath = "/chat" }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [nickname, setNickname] = useState("");
@@ -48,7 +52,7 @@ export function AuthWindow() {
         return;
       }
 
-      router.replace("/chat");
+      router.replace(nextPath);
       router.refresh();
     } catch {
       setError("Сеть недоступна");

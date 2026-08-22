@@ -14,6 +14,22 @@ export type NftItem = {
   valueRub: number;
 };
 
+export type NftDetails = NftItem & {
+  createdAt: string;
+  receivedAt: string;
+  transferCount: number;
+  owner: NftPerson;
+  creator: NftPerson | null;
+  receivedFrom: NftPerson | null;
+};
+
+export type NftPerson = {
+  id: string;
+  nickname: string;
+  displayName: string;
+  isVerified: boolean;
+};
+
 export type NewsItem = {
   id: string;
   title: string;

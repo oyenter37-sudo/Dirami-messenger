@@ -6,7 +6,23 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export default async function ChatPage() {
+export default async function ChatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    profile?: string | string[];
+    nft?: string | string[];
+  }>;
+}) {
+  const params = await searchParams;
+  const initialProfileId =
+    typeof params.profile === "string" && params.profile.length <= 64
+      ? params.profile
+      : null;
+  const initialNftId =
+    typeof params.nft === "string" && params.nft.length <= 64
+      ? params.nft
+      : null;
   const session = await getSession();
   if (!session) {
     redirect("/");
@@ -27,6 +43,8 @@ export default async function ChatPage() {
 
   return (
     <MessengerApp
+      initialNftId={initialNftId}
+      initialProfileId={initialProfileId}
       me={{
         ...session,
         nickname: currentUser.nickname,

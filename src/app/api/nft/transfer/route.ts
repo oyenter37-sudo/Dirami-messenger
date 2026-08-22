@@ -13,6 +13,8 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+class TransferConflictError extends Error {}
+
 export async function POST(request: Request) {
   const guard = mutationGuard(request);
   if (guard) return guard;
@@ -67,14 +69,28 @@ export async function POST(request: Request) {
     return jsonError("Нельзя передать самому себе", 400);
   }
 
-  const transfer = await prisma.nft.updateMany({
-    where: { id: nft.id, ownerId: auth.session.userId },
-    data: { ownerId: recipient.id },
-  });
-  if (transfer.count !== 1) {
-    return jsonError("NFT уже был передан", 409);
-  }
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      const transfer = await tx.nft.updateMany({
+        where: { id: nft.id, ownerId: auth.session.userId },
+        data: { ownerId: recipient.id },
+      });
+      if (transfer.count !== 1) throw new TransferConflictError();
 
-  const updated = await prisma.nft.findUnique({ where: { id: nft.id } });
-  return NextResponse.json({ ok: true, nft: updated });
+      await tx.nftTransfer.create({
+        data: {
+          nftId: nft.id,
+          fromUserId: auth.session.userId,
+          toUserId: recipient.id,
+        },
+      });
+      return tx.nft.findUnique({ where: { id: nft.id } });
+    });
+    return NextResponse.json({ ok: true, nft: updated });
+  } catch (error) {
+    if (error instanceof TransferConflictError) {
+      return jsonError("NFT уже был передан", 409);
+    }
+    throw error;
+  }
 }
