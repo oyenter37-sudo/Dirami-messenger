@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -12,9 +12,19 @@ export const metadata: Metadata = {
   description: "Мессенджер Dirami",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ru" data-theme="lagoon" className={`${inter.variable} h-full antialiased`}>
+    <html
+      lang="ru"
+      data-theme="lagoon"
+      className={`${inter.variable} h-full antialiased`}
+    >
       <body className="h-full bg-[var(--bg)] font-sans text-[var(--text)]">
         <script
           dangerouslySetInnerHTML={{

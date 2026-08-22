@@ -176,18 +176,22 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
 
   return (
     <div
-      className="overlay-in fixed inset-0 z-30 flex items-end justify-center bg-black/75 sm:items-center sm:p-4"
+      className="overlay-in fixed inset-0 z-30 flex items-end justify-center overflow-hidden bg-black/75 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <section
-        className="profile-shell profile-in relative flex max-h-[96vh] w-full max-w-2xl flex-col overflow-hidden bg-[var(--bg)] shadow-[0_35px_110px_rgba(0,0,0,.68)] sm:rounded-[2rem] sm:border sm:border-[var(--border)]"
+        className="profile-shell profile-in relative flex h-[100dvh] max-h-[100dvh] w-full max-w-2xl flex-col overflow-hidden bg-[var(--bg)] shadow-[0_35px_110px_rgba(0,0,0,.68)] sm:h-auto sm:max-h-[96vh] sm:rounded-[2rem] sm:border sm:border-[var(--border)]"
         onClick={(event) => event.stopPropagation()}
         style={profileStyle}
       >
         <button
           aria-label="Закрыть профиль"
-          className="absolute top-3 left-3 z-30 grid size-11 place-items-center rounded-full border border-white/15 bg-black/45 text-[26px] text-white shadow-lg transition hover:scale-105 hover:bg-black/65"
+          className="absolute z-30 grid size-10 place-items-center rounded-full border border-white/15 bg-black/55 text-[25px] leading-none text-white shadow-lg transition hover:scale-105 hover:bg-black/70 sm:size-11"
           onClick={onClose}
+          style={{
+            top: "max(0.75rem, env(safe-area-inset-top))",
+            left: "max(0.75rem, env(safe-area-inset-left))",
+          }}
           type="button"
         >
           ×
@@ -195,8 +199,13 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
 
         {mine && user ? (
           <button
-            className="absolute top-3 right-3 z-30 flex h-11 items-center gap-2 rounded-full border border-white/15 bg-black/45 px-4 text-xs font-bold text-white shadow-lg transition hover:scale-[1.02] hover:bg-black/65"
+            aria-label="Изменить профиль"
+            className="absolute z-30 flex h-10 max-w-[calc(100%_-_5.5rem)] items-center gap-2 rounded-full border border-white/15 bg-black/55 px-3 text-xs font-bold text-white shadow-lg transition hover:scale-[1.02] hover:bg-black/70 sm:h-11 sm:px-4"
             onClick={() => setEditorOpen(true)}
+            style={{
+              top: "max(0.75rem, env(safe-area-inset-top))",
+              right: "max(0.75rem, env(safe-area-inset-right))",
+            }}
             type="button"
           >
             <svg
@@ -217,7 +226,7 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                 strokeWidth="1.8"
               />
             </svg>
-            Настроить
+            <span className="hidden min-[360px]:inline">Настроить</span>
           </button>
         ) : null}
 
