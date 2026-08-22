@@ -8,13 +8,15 @@ type Props = {
   nickname: string;
   displayName?: string;
   onClose: () => void;
+  newsUnread: number;
   onOpenProfile: () => void;
+  onOpenNews: () => void;
   onOpenSettings: () => void;
   onOpenLimits: () => void;
   onLogout: () => Promise<void>;
 };
 
-type IconName = "profile" | "settings" | "limits" | "logout";
+type IconName = "profile" | "news" | "settings" | "limits" | "logout";
 
 function MenuIcon({ name }: { name: IconName }) {
   if (name === "profile") {
@@ -35,6 +37,35 @@ function MenuIcon({ name }: { name: IconName }) {
           stroke="currentColor"
           strokeLinecap="round"
           strokeWidth="1.8"
+        />
+      </svg>
+    );
+  }
+  if (name === "news") {
+    return (
+      <svg
+        aria-hidden="true"
+        className="size-5"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M6 4.5h11.2A1.8 1.8 0 0 1 19 6.3v12.2H6.8A1.8 1.8 0 0 1 5 16.7V5.5a1 1 0 0 1 1-1Z"
+          stroke="currentColor"
+          strokeLinejoin="round"
+          strokeWidth="1.7"
+        />
+        <path
+          d="M8.5 8h7M8.5 11h7M8.5 14h4.5"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.7"
+        />
+        <path
+          d="M19 16h-1.2a1.8 1.8 0 0 0-1.8 1.8v.7"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.5"
         />
       </svg>
     );
@@ -119,8 +150,10 @@ function MenuIcon({ name }: { name: IconName }) {
 export function AccountDrawer({
   nickname,
   displayName,
+  newsUnread,
   onClose,
   onOpenProfile,
+  onOpenNews,
   onOpenSettings,
   onOpenLimits,
   onLogout,
@@ -243,6 +276,36 @@ export function AccountDrawer({
               <span className="text-lg text-[var(--muted-2)] transition group-hover:translate-x-0.5">
                 ›
               </span>
+            </button>
+
+            <button
+              className="group flex w-full items-center gap-3 rounded-[1.25rem] border border-transparent px-3 py-3 text-left transition hover:border-[var(--border)] hover:bg-[var(--panel)]"
+              onClick={onOpenNews}
+              type="button"
+            >
+              <span className="relative grid size-10 shrink-0 place-items-center rounded-2xl bg-accent-muted text-accent-soft">
+                <MenuIcon name="news" />
+                {newsUnread > 0 ? (
+                  <span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black leading-5 text-white shadow-lg">
+                    {Math.min(newsUnread, 5)}
+                  </span>
+                ) : null}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold">Новости</span>
+                <span className="block text-[11px] text-[var(--muted-2)]">
+                  Последние обновления Dirami
+                </span>
+              </span>
+              {newsUnread > 0 ? (
+                <span className="rounded-full bg-red-500/15 px-2 py-1 text-[10px] font-black text-red-300">
+                  {newsUnread} непрочит.
+                </span>
+              ) : (
+                <span className="text-lg text-[var(--muted-2)] transition group-hover:translate-x-0.5">
+                  ›
+                </span>
+              )}
             </button>
 
             <button

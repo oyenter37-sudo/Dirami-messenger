@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AdminNewsPublisher } from "@/components/admin-news-publisher";
 import { AdminUserLimits } from "@/components/admin-user-limits";
 import { RichText } from "@/components/rich-text";
 import { applyTheme, readTheme, THEMES, type ThemeId } from "@/lib/theme";
@@ -254,6 +255,7 @@ export function SettingsPanel({ nickname, isAdmin, onClose }: Props) {
             </section>
           ) : null}
 
+          {isAdmin ? <AdminNewsPublisher /> : null}
           {isAdmin ? <AdminUserLimits /> : null}
         </div>
       </section>

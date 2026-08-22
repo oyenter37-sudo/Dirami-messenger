@@ -55,6 +55,28 @@ export function parseMessageContent(value: unknown) {
   return content;
 }
 
+export function parseNewsTitle(value: unknown) {
+  if (typeof value !== "string") return null;
+  const title = value.trim();
+  if (title.length < 1 || title.length > 100 || INLINE_CONTROL_RE.test(title)) {
+    return null;
+  }
+  return title;
+}
+
+export function parseNewsContent(value: unknown) {
+  if (typeof value !== "string") return null;
+  const content = value.trim();
+  if (
+    content.length < 1 ||
+    content.length > 3000 ||
+    TEXT_CONTROL_RE.test(content)
+  ) {
+    return null;
+  }
+  return content;
+}
+
 function isLocalAddress(hostname: string) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (

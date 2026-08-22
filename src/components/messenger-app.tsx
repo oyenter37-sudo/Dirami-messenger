@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { AccountDrawer } from "@/components/account-drawer";
 import { LimitsPanel } from "@/components/limits-panel";
+import { NewsPanel } from "@/components/news-panel";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SettingsPanel } from "@/components/settings-panel";
@@ -89,6 +90,8 @@ export function MessengerApp({ me }: Props) {
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [newsOpen, setNewsOpen] = useState(false);
+  const [newsUnread, setNewsUnread] = useState(0);
   const [limitsOpen, setLimitsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -123,6 +126,17 @@ export function MessengerApp({ me }: Props) {
     router.replace("/");
     router.refresh();
   }, [router]);
+
+  const loadNewsUnread = useCallback(async () => {
+    const response = await fetch("/api/news?summary=1", { cache: "no-store" });
+    if (response.status === 401) {
+      goHome();
+      return;
+    }
+    if (!response.ok) return;
+    const data = (await response.json()) as { unreadCount?: number };
+    setNewsUnread(Math.max(0, Math.min(5, data.unreadCount ?? 0)));
+  }, [goHome]);
 
   const loadChats = useCallback(async () => {
     const response = await fetch("/api/chats", { cache: "no-store" });
@@ -181,6 +195,25 @@ export function MessengerApp({ me }: Props) {
       window.clearInterval(timer);
     };
   }, [loadChats]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      if (document.visibilityState === "hidden") return;
+      try {
+        if (!cancelled) await loadNewsUnread();
+      } catch {
+        /* polling continues */
+      }
+    };
+
+    void tick();
+    const timer = window.setInterval(() => void tick(), 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [loadNewsUnread]);
 
   useEffect(() => {
     const cleanQuery = query.trim();
@@ -252,7 +285,7 @@ export function MessengerApp({ me }: Props) {
           </div>
           <button
             aria-label="Открыть меню"
-            className="grid size-10 shrink-0 place-items-center rounded-full border border-transparent text-[var(--muted)] transition hover:border-[var(--border)] hover:bg-white/5 hover:text-white"
+            className="relative grid size-10 shrink-0 place-items-center rounded-full border border-transparent text-[var(--muted)] transition hover:border-[var(--border)] hover:bg-white/5 hover:text-white"
             onClick={() => setAccountOpen(true)}
             type="button"
           >
@@ -266,6 +299,11 @@ export function MessengerApp({ me }: Props) {
               <circle cx="12" cy="12" r="1.8" />
               <circle cx="12" cy="19" r="1.8" />
             </svg>
+            {newsUnread > 0 ? (
+              <span className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-black leading-4 text-white">
+                {newsUnread}
+              </span>
+            ) : null}
           </button>
         </header>
 
@@ -397,9 +435,14 @@ export function MessengerApp({ me }: Props) {
       {accountOpen ? (
         <AccountDrawer
           displayName={me.displayName}
+          newsUnread={newsUnread}
           nickname={me.nickname}
           onClose={() => setAccountOpen(false)}
           onLogout={logout}
+          onOpenNews={() => {
+            setAccountOpen(false);
+            setNewsOpen(true);
+          }}
           onOpenLimits={() => {
             setAccountOpen(false);
             setLimitsOpen(true);
@@ -412,6 +455,12 @@ export function MessengerApp({ me }: Props) {
             setAccountOpen(false);
             setSettingsOpen(true);
           }}
+        />
+      ) : null}
+      {newsOpen ? (
+        <NewsPanel
+          onClose={() => setNewsOpen(false)}
+          onUnreadChange={setNewsUnread}
         />
       ) : null}
       {limitsOpen ? (

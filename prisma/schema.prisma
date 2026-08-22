@@ -26,7 +26,32 @@ model User {
   chatsAsA          Chat[]     @relation("ChatUserA")
   chatsAsB          Chat[]     @relation("ChatUserB")
   initiatedChats    Chat[]     @relation("ChatInitiator")
+  authoredNews      News[]     @relation("NewsAuthor")
+  newsReads         NewsRead[]
   limits            UserLimit?
+}
+
+model News {
+  id        String     @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime   @default(now())
+  authorId  String
+  author    User       @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  reads     NewsRead[]
+
+  @@index([createdAt])
+}
+
+model NewsRead {
+  userId String
+  newsId String
+  readAt DateTime @default(now())
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  news   News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@id([userId, newsId])
+  @@index([newsId])
 }
 
 model UserLimit {

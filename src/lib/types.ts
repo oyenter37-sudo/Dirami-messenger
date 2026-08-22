@@ -13,6 +13,18 @@ export type NftItem = {
   valueRub: number;
 };
 
+export type NewsItem = {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  unread: boolean;
+  author: {
+    nickname: string;
+    displayName: string;
+  };
+};
+
 export type PublicUser = {
   id: string;
   nickname: string;
