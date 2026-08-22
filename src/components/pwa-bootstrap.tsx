@@ -13,15 +13,49 @@ declare global {
   }
 }
 
+const INSTALL_STORAGE_KEY = "dirami-app-installed";
+
+function runsStandalone() {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
+  );
+}
+
+export function rememberDiramiInstalled(installed = true) {
+  if (typeof window === "undefined") return;
+  try {
+    if (installed) window.localStorage.setItem(INSTALL_STORAGE_KEY, "1");
+    else window.localStorage.removeItem(INSTALL_STORAGE_KEY);
+  } catch {
+    // Installation detection still works in standalone mode without storage.
+  }
+}
+
+export function isDiramiInstalled() {
+  if (typeof window === "undefined") return false;
+  if (runsStandalone()) return true;
+  try {
+    return window.localStorage.getItem(INSTALL_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function PwaBootstrap() {
   useEffect(() => {
+    if (runsStandalone()) rememberDiramiInstalled();
+
     const captureInstallPrompt = (event: Event) => {
       event.preventDefault();
       window.__diramiInstallPrompt = event as DiramiInstallPrompt;
+      if (!runsStandalone()) rememberDiramiInstalled(false);
       window.dispatchEvent(new Event("dirami-install-available"));
     };
     const installed = () => {
       window.__diramiInstallPrompt = null;
+      rememberDiramiInstalled();
       window.dispatchEvent(new Event("dirami-app-installed"));
     };
 

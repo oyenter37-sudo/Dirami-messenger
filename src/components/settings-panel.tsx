@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AdminNewsPublisher } from "@/components/admin-news-publisher";
+import { AdminNftManager } from "@/components/admin-nft-manager";
 import { AdminUserLimits } from "@/components/admin-user-limits";
 import { VerifiedName } from "@/components/verified-name";
 import { applyTheme, readTheme, THEMES, type ThemeId } from "@/lib/theme";
@@ -91,6 +92,7 @@ export function SettingsPanel({
       setNftValue("");
       setNftImage("");
       setNftMsg(`Выпущено: ${data.created}`);
+      window.dispatchEvent(new Event("dirami-nfts-changed"));
     } catch {
       setNftMsg("Сеть недоступна");
     }
@@ -261,6 +263,7 @@ export function SettingsPanel({
             </section>
           ) : null}
 
+          {isAdmin ? <AdminNftManager /> : null}
           {isAdmin ? <AdminNewsPublisher /> : null}
           {isAdmin ? <AdminUserLimits /> : null}
         </div>

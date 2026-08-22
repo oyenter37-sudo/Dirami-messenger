@@ -1,7 +1,11 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
-import type { DiramiInstallPrompt } from "@/components/pwa-bootstrap";
+import {
+  isDiramiInstalled,
+  rememberDiramiInstalled,
+  type DiramiInstallPrompt,
+} from "@/components/pwa-bootstrap";
 
 function MenuShell({
   icon,
@@ -82,14 +86,6 @@ function BellIcon({ active }: { active: boolean }) {
   );
 }
 
-function isStandalone() {
-  if (typeof window === "undefined") return false;
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
-  );
-}
-
 export function InstallAppMenuItem() {
   const [installed, setInstalled] = useState(false);
   const [prompt, setPrompt] = useState<DiramiInstallPrompt | null>(null);
@@ -97,7 +93,7 @@ export function InstallAppMenuItem() {
 
   useEffect(() => {
     const refresh = () => {
-      setInstalled(isStandalone());
+      setInstalled(isDiramiInstalled());
       setPrompt(window.__diramiInstallPrompt ?? null);
     };
     refresh();
@@ -119,7 +115,11 @@ export function InstallAppMenuItem() {
     const choice = await prompt.userChoice;
     window.__diramiInstallPrompt = null;
     setPrompt(null);
-    if (choice.outcome === "accepted") setInstalled(true);
+    if (choice.outcome === "accepted") {
+      rememberDiramiInstalled();
+      setInstalled(true);
+      window.dispatchEvent(new Event("dirami-app-installed"));
+    }
   }
 
   return (
@@ -200,13 +200,18 @@ function applicationServerKey(value: string) {
 
 export function PushNotificationsMenuItem() {
   const [supported, setSupported] = useState<boolean | null>(null);
+  const [installed, setInstalled] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
 
   useEffect(() => {
     let cancelled = false;
+    const refreshInstalled = () => {
+      if (!cancelled) setInstalled(isDiramiInstalled());
+    };
     const timer = window.setTimeout(() => {
+      refreshInstalled();
       const available =
         "serviceWorker" in navigator &&
         "PushManager" in window &&
@@ -223,13 +228,26 @@ export function PushNotificationsMenuItem() {
         .catch(() => undefined);
     }, 0);
 
+    window.addEventListener("dirami-install-available", refreshInstalled);
+    window.addEventListener("dirami-app-installed", refreshInstalled);
+    window.addEventListener("focus", refreshInstalled);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
+      window.removeEventListener("dirami-install-available", refreshInstalled);
+      window.removeEventListener("dirami-app-installed", refreshInstalled);
+      window.removeEventListener("focus", refreshInstalled);
     };
   }, []);
 
   async function enable() {
+    if (!isDiramiInstalled()) {
+      setInstalled(false);
+      setStatus("Сначала установите приложение Dirami");
+      return;
+    }
+    setInstalled(true);
+
     if (Notification.permission === "denied") {
       setStatus("Разрешите уведомления в настройках браузера");
       return;
@@ -300,7 +318,7 @@ export function PushNotificationsMenuItem() {
   }
 
   async function toggle() {
-    if (!supported || busy) return;
+    if (!supported || busy || (!enabled && !installed)) return;
     setBusy(true);
     setStatus("");
     try {
@@ -319,13 +337,15 @@ export function PushNotificationsMenuItem() {
     status ||
     (supported === false
       ? "Не поддерживаются этим браузером"
-      : enabled
-        ? "Нажмите, чтобы отключить"
-        : "Сообщения и новости при закрытом Dirami");
+      : !installed && !enabled
+        ? "Сначала установите приложение Dirami"
+        : enabled
+          ? "Нажмите, чтобы отключить"
+          : "Сообщения и новости при закрытом Dirami");
 
   return (
     <MenuShell
-      disabled={supported !== true || busy}
+      disabled={supported !== true || busy || (!installed && !enabled)}
       hint={busy ? "Подождите…" : hint}
       icon={<BellIcon active={enabled} />}
       onClick={() => void toggle()}
