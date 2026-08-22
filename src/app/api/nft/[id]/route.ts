@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireSession } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { consumeRateLimit, MINUTE, rateLimitResponse } from "@/lib/rate-limit";
+import {
+  consumeRateLimit,
+  MINUTE,
+  rateLimitResponse,
+  requestAddress,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,14 +19,14 @@ const userSelect = {
 } as const;
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireSession();
-  if (auth.error) return auth.error;
+  const session = auth.error ? null : auth.session;
 
   const detailLimit = await consumeRateLimit({
-    subject: `user:${auth.session.userId}`,
+    subject: session ? `user:${session.userId}` : requestAddress(request),
     action: "nft_detail",
     limit: 60,
     windowMs: MINUTE,

@@ -7,34 +7,37 @@ import {
   getUserLimits,
   MINUTE,
   rateLimitResponse,
+  requestAddress,
 } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireSession();
-  if (auth.error) return auth.error;
-
-  const limits = await getUserLimits(auth.session.userId);
+  const session = auth.error ? null : auth.session;
+  const limits = session ? await getUserLimits(session.userId) : null;
+  const profileLimit = limits?.profileViewsPerMinute ?? 60;
   const viewLimit = await consumeRateLimit({
-    subject: `user:${auth.session.userId}`,
+    subject: session ? `user:${session.userId}` : requestAddress(request),
     action: "profile_view",
-    limit: limits.profileViewsPerMinute,
+    limit: profileLimit,
     windowMs: MINUTE,
   });
   if (!viewLimit.allowed) {
     return rateLimitResponse(
       viewLimit,
-      `Можно открыть не более ${limits.profileViewsPerMinute} профилей в минуту`,
+      `Можно открыть не более ${profileLimit} профилей в минуту`,
     );
   }
 
   const { id } = await context.params;
-  const pair = chatPair(auth.session.userId, id);
+  if (!id || id.length > 64) return jsonError("Некорректный профиль", 400);
+
+  const pair = session ? chatPair(session.userId, id) : null;
   const [user, chat] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
@@ -54,10 +57,12 @@ export async function GET(
         },
       },
     }),
-    prisma.chat.findUnique({
-      where: { userAId_userBId: pair },
-      select: { status: true, initiatorId: true },
-    }),
+    pair
+      ? prisma.chat.findUnique({
+          where: { userAId_userBId: pair },
+          select: { status: true, initiatorId: true },
+        })
+      : Promise.resolve(null),
   ]);
   if (!user) {
     return jsonError("Пользователь не найден", 404);
@@ -65,6 +70,6 @@ export async function GET(
 
   return NextResponse.json({
     user,
-    state: chatStateFor(chat, auth.session.userId),
+    state: session ? chatStateFor(chat, session.userId) : "none",
   });
 }

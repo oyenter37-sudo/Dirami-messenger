@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { PublicNftViewer } from "@/components/public-link-viewer";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -13,23 +14,21 @@ export default async function NftLinkPage({
   const { id } = await params;
   if (!id || id.length > 64) notFound();
 
-  const publicPath = `/u/nft/${encodeURIComponent(id)}`;
   const session = await getSession();
-  if (!session) {
-    redirect(`/?next=${encodeURIComponent(publicPath)}`);
-  }
-
   const [viewer, nft] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { sessionVersion: true },
-    }),
+    session
+      ? prisma.user.findUnique({
+          where: { id: session.userId },
+          select: { sessionVersion: true },
+        })
+      : Promise.resolve(null),
     prisma.nft.findUnique({ where: { id }, select: { id: true } }),
   ]);
-  if (!viewer || viewer.sessionVersion !== session.sessionVersion) {
-    redirect(`/?next=${encodeURIComponent(publicPath)}`);
-  }
   if (!nft) notFound();
 
-  redirect(`/chat?nft=${encodeURIComponent(nft.id)}`);
+  if (session && viewer?.sessionVersion === session.sessionVersion) {
+    redirect(`/chat?nft=${encodeURIComponent(nft.id)}`);
+  }
+
+  return <PublicNftViewer nftId={nft.id} />;
 }

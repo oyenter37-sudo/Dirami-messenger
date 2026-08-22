@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { PublicProfileViewer } from "@/components/public-link-viewer";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -20,26 +21,33 @@ export default async function UserLinkPage({
   const username = decodedUsername.replace(/^@/, "").trim();
   if (!username || username.length > 24) notFound();
 
-  const publicPath = `/u/u/@${encodeURIComponent(username)}`;
   const session = await getSession();
-  if (!session) {
-    redirect(`/?next=${encodeURIComponent(publicPath)}`);
-  }
-
   const [viewer, target] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { sessionVersion: true },
-    }),
+    session
+      ? prisma.user.findUnique({
+          where: { id: session.userId },
+          select: { sessionVersion: true },
+        })
+      : Promise.resolve(null),
     prisma.user.findFirst({
       where: { nickname: { equals: username, mode: "insensitive" } },
-      select: { id: true },
+      select: {
+        id: true,
+        nickname: true,
+        displayName: true,
+        bio: true,
+        avatarUrl: true,
+        profileAccent: true,
+        profileBackground: true,
+        isVerified: true,
+      },
     }),
   ]);
-  if (!viewer || viewer.sessionVersion !== session.sessionVersion) {
-    redirect(`/?next=${encodeURIComponent(publicPath)}`);
-  }
   if (!target) notFound();
 
-  redirect(`/chat?profile=${encodeURIComponent(target.id)}`);
+  if (session && viewer?.sessionVersion === session.sessionVersion) {
+    redirect(`/chat?profile=${encodeURIComponent(target.id)}`);
+  }
+
+  return <PublicProfileViewer user={target} />;
 }
