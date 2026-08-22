@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const address = requestAddress(request);
     const addressLimit = await consumeRateLimit({
       subject: address,
-      action: "login_address",
+      action: "login_address_v2",
       limit: 40,
       windowMs: 5 * MINUTE,
     });
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
     const loginLimit = await consumeRateLimit({
       subject: `${address}:login:${nickname.toLowerCase()}`,
-      action: "login_attempt",
+      action: "login_attempt_v2",
       limit: 10,
       windowMs: 5 * MINUTE,
     });
