@@ -16,7 +16,12 @@ type Props = {
   meId: string;
   fallback?: Pick<
     PublicUser,
-    "nickname" | "bio" | "avatarUrl" | "profileAccent" | "profileBackground"
+    | "nickname"
+    | "displayName"
+    | "bio"
+    | "avatarUrl"
+    | "profileAccent"
+    | "profileBackground"
   >;
   onClose: () => void;
 };
@@ -40,6 +45,7 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
       ? {
           id: userId,
           nickname: fallback.nickname,
+          displayName: fallback.displayName,
           bio: fallback.bio,
           avatarUrl: fallback.avatarUrl,
           profileAccent: fallback.profileAccent,
@@ -93,9 +99,12 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
   }, [detailsKey, editorOpen, transfer]);
 
   const nickname = user?.nickname ?? fallback?.nickname ?? "…";
+  const displayName = user?.displayName || fallback?.displayName || nickname;
   const bio = user?.bio ?? fallback?.bio ?? "";
   const avatarUrl = user?.avatarUrl ?? fallback?.avatarUrl ?? "";
-  const accent = normalizeProfileAccent(user?.profileAccent ?? fallback?.profileAccent);
+  const accent = normalizeProfileAccent(
+    user?.profileAccent ?? fallback?.profileAccent,
+  );
   const background = normalizeProfileBackground(
     user?.profileBackground ?? fallback?.profileBackground,
   );
@@ -122,7 +131,8 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
     }
     return [...grouped.values()];
   }, [nfts]);
-  const detailsGroup = nftGroups.find((group) => group.key === detailsKey) ?? null;
+  const detailsGroup =
+    nftGroups.find((group) => group.key === detailsKey) ?? null;
   const joined = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString("ru-RU", {
         day: "numeric",
@@ -142,7 +152,10 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
       const response = await fetch("/api/nft/transfer", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ nftId: transfer.nft.id, toNickname: transfer.to }),
+        body: JSON.stringify({
+          nftId: transfer.nft.id,
+          toNickname: transfer.to,
+        }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -182,9 +195,23 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
             onClick={() => setEditorOpen(true)}
             type="button"
           >
-            <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 24 24">
-              <path d="m4 16-.8 4.8L8 20l10.7-10.7a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6 4 16Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
-              <path d="m13.8 7.4 2.8 2.8" stroke="currentColor" strokeWidth="1.8" />
+            <svg
+              aria-hidden="true"
+              className="size-4"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="m4 16-.8 4.8L8 20l10.7-10.7a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6 4 16Z"
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeWidth="1.8"
+              />
+              <path
+                d="m13.8 7.4 2.8 2.8"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
             </svg>
             Настроить
           </button>
@@ -201,7 +228,7 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
             <UserAvatar
               avatarUrl={avatarUrl}
               className="absolute bottom-0 left-5 size-28 translate-y-1/2 rounded-[2rem] border-[5px] border-[var(--bg)] text-3xl shadow-[0_18px_50px_-20px_rgba(0,0,0,.9)] sm:left-7 sm:size-32"
-              nickname={nickname}
+              nickname={displayName}
             />
           </div>
 
@@ -209,9 +236,11 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <h1 className="truncate text-[27px] leading-8 font-black tracking-[-0.03em] sm:text-[30px]">
-                  <RichText text={nickname} />
+                  <RichText text={displayName} />
                 </h1>
-                <p className="mt-1 text-sm font-medium text-[var(--muted-2)]">@{nickname}</p>
+                <p className="mt-1 text-sm font-medium text-[var(--muted-2)]">
+                  @{nickname}
+                </p>
               </div>
               <span className="profile-accent-soft profile-accent-text mt-1 shrink-0 rounded-full px-3 py-1.5 text-[10px] font-extrabold tracking-wide uppercase">
                 Dirami profile
@@ -236,8 +265,14 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                   О себе
                 </h2>
               </div>
-              <p className={`text-[15px] leading-6 ${bio.trim() ? "" : "text-[var(--muted-2)]"}`}>
-                {bio.trim() ? <RichText text={bio} /> : "Пользователь пока ничего о себе не рассказал."}
+              <p
+                className={`text-[15px] leading-6 ${bio.trim() ? "" : "text-[var(--muted-2)]"}`}
+              >
+                {bio.trim() ? (
+                  <RichText text={bio} />
+                ) : (
+                  "Пользователь пока ничего о себе не рассказал."
+                )}
               </p>
             </section>
 
@@ -262,7 +297,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                   <p className="text-[10px] font-bold tracking-[0.14em] text-[var(--muted-2)] uppercase">
                     Цифровая коллекция
                   </p>
-                  <h2 className="mt-1 text-xl font-black">{mine ? "Мои NFT" : "NFT"}</h2>
+                  <h2 className="mt-1 text-xl font-black">
+                    {mine ? "Мои NFT" : "NFT"}
+                  </h2>
                 </div>
                 <span className="profile-accent-soft profile-accent-text rounded-full px-3 py-1.5 text-[11px] font-extrabold">
                   {nfts.length} шт.
@@ -274,7 +311,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                   <div className="profile-accent-soft profile-accent-text mx-auto grid size-14 place-items-center rounded-[1.25rem] text-2xl">
                     ◇
                   </div>
-                  <p className="mt-4 text-sm font-extrabold">Коллекция пока пуста</p>
+                  <p className="mt-4 text-sm font-extrabold">
+                    Коллекция пока пуста
+                  </p>
                   <p className="mx-auto mt-1 max-w-xs text-xs leading-5 text-[var(--muted-2)]">
                     Когда здесь появятся NFT, их увидят все посетители профиля.
                   </p>
@@ -295,7 +334,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                         className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--panel)] p-1.5 shadow-[0_16px_36px_-26px_rgba(0,0,0,0.9)]"
                       >
                         <button
-                          aria-label={multiple ? `Открыть ${group.name}` : group.name}
+                          aria-label={
+                            multiple ? `Открыть ${group.name}` : group.name
+                          }
                           className={`relative block aspect-square w-full overflow-hidden rounded-[1.1rem] text-left ${
                             multiple ? "cursor-pointer" : "cursor-default"
                           }`}
@@ -315,7 +356,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                           ) : null}
                         </button>
                         <div className="px-2 pt-2.5 pb-1.5">
-                          <p className="truncate text-[13px] font-bold leading-5">{group.name}</p>
+                          <p className="truncate text-[13px] font-bold leading-5">
+                            {group.name}
+                          </p>
                           <p className="mt-0.5 truncate text-[11px] font-medium text-amber-200/90">
                             ≈ {price}
                           </p>
@@ -332,7 +375,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                         ) : mine ? (
                           <button
                             className="mt-1 w-full rounded-2xl px-3 py-2.5 text-center text-[12px] font-semibold text-[var(--muted)] hover:bg-white/5 hover:text-white"
-                            onClick={() => setTransfer({ nft, to: "", step: 1 })}
+                            onClick={() =>
+                              setTransfer({ nft, to: "", step: 1 })
+                            }
                             type="button"
                           >
                             Передать
@@ -376,7 +421,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                   <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--muted-2)] uppercase">
                     NFT-коллекция
                   </p>
-                  <h3 className="truncate text-[17px] font-extrabold">Все экземпляры</h3>
+                  <h3 className="truncate text-[17px] font-extrabold">
+                    Все экземпляры
+                  </h3>
                 </div>
                 <button
                   aria-label="Закрыть список NFT"
@@ -395,8 +442,12 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                     src={detailsGroup.imageUrl}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[17px] font-extrabold">{detailsGroup.name}</p>
-                    <p className="mt-1 text-xs text-[var(--muted-2)]">Все одинаковые экземпляры</p>
+                    <p className="truncate text-[17px] font-extrabold">
+                      {detailsGroup.name}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted-2)]">
+                      Все одинаковые экземпляры
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       <span className="profile-accent-soft profile-accent-text rounded-full px-2.5 py-1 text-[11px] font-bold">
                         {detailsGroup.items.length} шт.
@@ -409,21 +460,30 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2.5">
                   <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-3.5 py-3">
-                    <p className="text-[10px] font-semibold text-[var(--muted-2)] uppercase">Количество</p>
-                    <p className="mt-1 text-lg font-extrabold">{detailsGroup.items.length}</p>
+                    <p className="text-[10px] font-semibold text-[var(--muted-2)] uppercase">
+                      Количество
+                    </p>
+                    <p className="mt-1 text-lg font-extrabold">
+                      {detailsGroup.items.length}
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-3.5 py-3">
-                    <p className="text-[10px] font-semibold text-[var(--muted-2)] uppercase">Общая оценка</p>
+                    <p className="text-[10px] font-semibold text-[var(--muted-2)] uppercase">
+                      Общая оценка
+                    </p>
                     <p className="mt-1 truncate text-lg font-extrabold">
                       {detailsGroup.items
                         .reduce((sum, nft) => sum + nft.valueRub, 0)
-                        .toLocaleString("ru-RU")} ₽
+                        .toLocaleString("ru-RU")}{" "}
+                      ₽
                     </p>
                   </div>
                 </div>
                 <div className="mt-6 flex items-center justify-between">
                   <h4 className="text-sm font-extrabold">Экземпляры</h4>
-                  <span className="text-[11px] text-[var(--muted-2)]">{detailsGroup.items.length} всего</span>
+                  <span className="text-[11px] text-[var(--muted-2)]">
+                    {detailsGroup.items.length} всего
+                  </span>
                 </div>
                 <div className="mt-2.5 space-y-2">
                   {detailsGroup.items.map((nft, index) => (
@@ -435,7 +495,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-extrabold">{nft.valueRub.toLocaleString("ru-RU")} ₽</p>
+                        <p className="text-[13px] font-extrabold">
+                          {nft.valueRub.toLocaleString("ru-RU")} ₽
+                        </p>
                         <p className="mt-0.5 truncate font-mono text-[10px] text-[var(--muted-2)]">
                           ID · {nft.id.slice(-10)}
                         </p>
@@ -469,7 +531,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-bold">Передача NFT</p>
-                  <p className="mt-1 text-xs text-[var(--muted-2)]">{transfer.nft.name}</p>
+                  <p className="mt-1 text-xs text-[var(--muted-2)]">
+                    {transfer.nft.name}
+                  </p>
                 </div>
                 <button
                   className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/10 text-xl text-white"
@@ -483,11 +547,15 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                 <>
                   <input
                     className="mt-3 w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-sm"
-                    onChange={(event) => setTransfer({ ...transfer, to: event.target.value })}
+                    onChange={(event) =>
+                      setTransfer({ ...transfer, to: event.target.value })
+                    }
                     placeholder="Ник получателя"
                     value={transfer.to}
                   />
-                  <p className="mt-3 text-[13px]">Подтверждение 1/2. Точно передать этот NFT?</p>
+                  <p className="mt-3 text-[13px]">
+                    Подтверждение 1/2. Точно передать этот NFT?
+                  </p>
                   <div className="mt-3 flex gap-2">
                     <button
                       className="flex-1 rounded-full border border-[var(--border)] py-2 text-sm"
@@ -509,8 +577,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
               ) : (
                 <>
                   <p className="mt-3 text-[13px]">
-                    Подтверждение 2/2. Отменить будет нельзя. Передать <b>{transfer.nft.name}</b>{" "}
-                    пользователю <b>{transfer.to}</b>?
+                    Подтверждение 2/2. Отменить будет нельзя. Передать{" "}
+                    <b>{transfer.nft.name}</b> пользователю <b>{transfer.to}</b>
+                    ?
                   </p>
                   <div className="mt-3 flex gap-2">
                     <button
@@ -530,7 +599,9 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                   </div>
                 </>
               )}
-              {transferError ? <p className="mt-2 text-xs text-red-300">{transferError}</p> : null}
+              {transferError ? (
+                <p className="mt-2 text-xs text-red-300">{transferError}</p>
+              ) : null}
             </div>
           </div>
         ) : null}

@@ -66,7 +66,9 @@ export function AuthWindow() {
           <span className="size-2.5 rounded-full bg-red-400/90" />
           <span className="size-2.5 rounded-full bg-amber-400/90" />
           <span className="size-2.5 rounded-full bg-emerald-400/90" />
-          <p className="ml-2 text-xs tracking-wide text-zinc-500">dirami://auth</p>
+          <p className="ml-2 text-xs tracking-wide text-zinc-500">
+            dirami://auth
+          </p>
         </header>
 
         <div className="px-6 py-8 sm:px-8">
@@ -76,7 +78,9 @@ export function AuthWindow() {
             </span>
             <div>
               <p className="text-sm font-medium text-accent-soft">Dirami</p>
-              <h1 className="text-2xl font-semibold tracking-tight">Мессенджер</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Мессенджер
+              </h1>
             </div>
           </div>
 
@@ -129,12 +133,17 @@ export function AuthWindow() {
             <label className="block">
               <span className="mb-1.5 block text-sm text-zinc-400">Пароль</span>
               <input
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
                 className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-base placeholder:text-[var(--muted-2)] focus:border-[var(--accent)]"
                 maxLength={72}
+                minLength={mode === "login" ? 6 : 8}
                 name="password"
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="минимум 6 символов"
+                placeholder={
+                  mode === "login" ? "ваш пароль" : "минимум 8 символов"
+                }
                 type="password"
                 value={password}
               />

@@ -1,18 +1,37 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonError, requireSession } from "@/lib/api";
+import { jsonError, requireAdmin } from "@/lib/api";
 import { parseHttpUrl } from "@/lib/validators";
+import {
+  consumeRateLimit,
+  getUserLimits,
+  HOUR,
+  mutationGuard,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ADMIN = "mara";
-
 export async function POST(request: Request) {
-  const auth = await requireSession();
+  const guard = mutationGuard(request);
+  if (guard) return guard;
+
+  const auth = await requireAdmin();
   if (auth.error) return auth.error;
-  if (auth.session.nickname.toLowerCase() !== ADMIN) {
-    return jsonError("Только админ может выпускать NFT", 403);
+
+  const limits = await getUserLimits(auth.session.userId);
+  const mintLimit = await consumeRateLimit({
+    subject: `user:${auth.session.userId}`,
+    action: "nft_mint",
+    limit: limits.nftMintsPerHour,
+    windowMs: HOUR,
+  });
+  if (!mintLimit.allowed) {
+    return rateLimitResponse(
+      mintLimit,
+      `Можно выпускать NFT не более ${limits.nftMintsPerHour} раз в час`,
+    );
   }
 
   let body: unknown;

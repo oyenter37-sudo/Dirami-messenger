@@ -5,10 +5,11 @@ import { SESSION_COOKIE } from "@/lib/constants";
 async function hasSession(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const secret = process.env.AUTH_SECRET;
-  if (!token || !secret) return false;
+  const encodedSecret = secret ? new TextEncoder().encode(secret) : null;
+  if (!token || !encodedSecret || encodedSecret.byteLength < 32) return false;
 
   try {
-    await jwtVerify(token, new TextEncoder().encode(secret));
+    await jwtVerify(token, encodedSecret);
     return true;
   } catch {
     return false;
@@ -24,13 +25,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (path === "/" && loggedIn) {
-    return NextResponse.redirect(new URL("/chat", request.url));
-  }
-
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/", "/chat/:path*"],
+  matcher: ["/chat/:path*"],
 };

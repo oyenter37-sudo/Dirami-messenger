@@ -10,7 +10,7 @@ export type RawMessage = {
     id: string;
     content: string;
     senderId: string;
-    sender: { nickname: string };
+    sender: { nickname: string; displayName: string };
   } | null;
   reactions: { emoji: string; userId: string }[];
 };
@@ -35,7 +35,9 @@ export function serializeMessage(message: RawMessage, me: string): ChatMessage {
           id: message.replyTo.id,
           content: message.replyTo.content,
           senderId: message.replyTo.senderId,
-          nickname: message.replyTo.sender.nickname,
+          nickname:
+            message.replyTo.sender.displayName ||
+            message.replyTo.sender.nickname,
         }
       : null,
     reactions: [...grouped.entries()].map(([emoji, value]) => ({

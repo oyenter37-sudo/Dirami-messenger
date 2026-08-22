@@ -20,7 +20,9 @@ type Props = {
 export function ProfileEditor({ user, onClose, onSaved }: Props) {
   const [bio, setBio] = useState(user.bio);
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
-  const [accent, setAccent] = useState(normalizeProfileAccent(user.profileAccent));
+  const [accent, setAccent] = useState(
+    normalizeProfileAccent(user.profileAccent),
+  );
   const [background, setBackground] = useState(
     normalizeProfileBackground(user.profileBackground),
   );
@@ -42,7 +44,10 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
           profileBackground: background,
         }),
       });
-      const data = (await response.json()) as { error?: string; user?: PublicUser };
+      const data = (await response.json()) as {
+        error?: string;
+        user?: PublicUser;
+      };
       if (!response.ok || !data.user) {
         setError(data.error ?? "Не удалось сохранить профиль");
         return;
@@ -61,7 +66,10 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
   } as CSSProperties;
 
   return (
-    <div className="absolute inset-0 z-50 flex justify-end bg-black/75" onClick={onClose}>
+    <div
+      className="absolute inset-0 z-50 flex justify-end bg-black/75"
+      onClick={onClose}
+    >
       <section
         aria-label="Настройка профиля"
         className="sheet-in flex h-full w-full max-w-lg flex-col border-l border-[var(--border)] bg-[var(--bg)] shadow-[-25px_0_80px_rgba(0,0,0,.5)]"
@@ -94,11 +102,15 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
               <UserAvatar
                 avatarUrl={avatarUrl}
                 className="size-16 rounded-[1.25rem] border-[3px] border-white/80 text-lg shadow-xl"
-                nickname={user.nickname}
+                nickname={user.displayName || user.nickname}
               />
               <div className="min-w-0 pb-1 text-white">
-                <p className="truncate text-lg font-extrabold">{user.nickname}</p>
-                <p className="truncate text-xs text-white/65">@{user.nickname}</p>
+                <p className="truncate text-lg font-extrabold">
+                  {user.displayName || user.nickname}
+                </p>
+                <p className="truncate text-xs text-white/65">
+                  @{user.nickname}
+                </p>
               </div>
             </div>
           </div>
@@ -128,7 +140,8 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
               value={avatarUrl}
             />
             <p className="mt-1.5 text-[11px] leading-5 text-[var(--muted-2)]">
-              Вставьте прямую ссылку на изображение. Аватар увидят все пользователи.
+              Вставьте прямую ссылку на изображение. Аватар увидят все
+              пользователи.
             </p>
           </section>
 
@@ -137,7 +150,9 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
               <label className="text-sm font-bold" htmlFor="profile-bio">
                 Описание
               </label>
-              <span className="text-[10px] text-[var(--muted-2)]">{bio.length}/280</span>
+              <span className="text-[10px] text-[var(--muted-2)]">
+                {bio.length}/280
+              </span>
             </div>
             <textarea
               className="min-h-28 w-full resize-none rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-3.5 py-3 text-sm leading-6 placeholder:text-[var(--muted-2)]"
@@ -153,7 +168,9 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold">Цвет профиля</p>
-                <p className="mt-0.5 text-[11px] text-[var(--muted-2)]">Кнопки, метки и подсветка</p>
+                <p className="mt-0.5 text-[11px] text-[var(--muted-2)]">
+                  Кнопки, метки и подсветка
+                </p>
               </div>
               <label
                 className="relative grid size-10 cursor-pointer place-items-center overflow-hidden rounded-full border-[3px] border-white/15 shadow-lg"
@@ -167,7 +184,9 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
                   type="color"
                   value={accent}
                 />
-                <span className="text-sm font-black text-white drop-shadow">+</span>
+                <span className="text-sm font-black text-white drop-shadow">
+                  +
+                </span>
               </label>
             </div>
             <div className="flex flex-wrap gap-2.5">
@@ -175,7 +194,9 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
                 <button
                   aria-label={`Цвет ${color}`}
                   className={`size-9 rounded-full border-[3px] transition hover:scale-110 ${
-                    accent === color ? "border-white shadow-lg" : "border-transparent"
+                    accent === color
+                      ? "border-white shadow-lg"
+                      : "border-transparent"
                   }`}
                   key={color}
                   onClick={() => setAccent(color)}
@@ -209,9 +230,13 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
                   >
                     <span
                       className="block h-20 rounded-xl"
-                      style={{ background: profileBackgroundCss(item.id, accent) }}
+                      style={{
+                        background: profileBackgroundCss(item.id, accent),
+                      }}
                     />
-                    <span className="block px-1.5 pt-2 pb-1 text-xs font-bold">{item.name}</span>
+                    <span className="block px-1.5 pt-2 pb-1 text-xs font-bold">
+                      {item.name}
+                    </span>
                   </button>
                 );
               })}

@@ -7,6 +7,14 @@ import {
   parseProfileAccent,
   parseProfileBackground,
 } from "@/lib/validators";
+import {
+  consumeRateLimit,
+  getUserLimits,
+  HOUR,
+  MINUTE,
+  mutationGuard,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +22,7 @@ export const dynamic = "force-dynamic";
 const publicProfileSelect = {
   id: true,
   nickname: true,
+  displayName: true,
   bio: true,
   avatarUrl: true,
   profileAccent: true,
@@ -29,6 +38,17 @@ export async function GET() {
   const auth = await requireSession();
   if (auth.error) return auth.error;
 
+  const limits = await getUserLimits(auth.session.userId);
+  const viewLimit = await consumeRateLimit({
+    subject: `user:${auth.session.userId}`,
+    action: "profile_view",
+    limit: limits.profileViewsPerMinute,
+    windowMs: MINUTE,
+  });
+  if (!viewLimit.allowed) {
+    return rateLimitResponse(viewLimit, "Слишком много открытий профиля");
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: auth.session.userId },
     select: publicProfileSelect,
@@ -39,8 +59,25 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  const guard = mutationGuard(request);
+  if (guard) return guard;
+
   const auth = await requireSession();
   if (auth.error) return auth.error;
+
+  const limits = await getUserLimits(auth.session.userId);
+  const updateLimit = await consumeRateLimit({
+    subject: `user:${auth.session.userId}`,
+    action: "profile_update",
+    limit: limits.profileUpdatesPerHour,
+    windowMs: HOUR,
+  });
+  if (!updateLimit.allowed) {
+    return rateLimitResponse(
+      updateLimit,
+      `Можно изменять профиль не более ${limits.profileUpdatesPerHour} раз в час`,
+    );
+  }
 
   let body: unknown;
   try {
@@ -70,7 +107,8 @@ export async function PATCH(request: Request) {
 
   if (Object.hasOwn(payload, "avatarUrl")) {
     const avatarUrl = parseOptionalHttpUrl(payload.avatarUrl);
-    if (avatarUrl === null) return jsonError("Нужна корректная http/https-ссылка на аватар", 400);
+    if (avatarUrl === null)
+      return jsonError("Нужна корректная http/https-ссылка на аватар", 400);
     data.avatarUrl = avatarUrl;
   }
 

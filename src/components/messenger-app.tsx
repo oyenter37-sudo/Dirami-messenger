@@ -1,8 +1,16 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import { AccountDrawer } from "@/components/account-drawer";
+import { LimitsPanel } from "@/components/limits-panel";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SettingsPanel } from "@/components/settings-panel";
@@ -27,7 +35,10 @@ function formatTime(iso: string) {
   const now = new Date();
   const sameDay = date.toDateString() === now.toDateString();
   if (sameDay) {
-    return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
   return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
@@ -68,13 +79,15 @@ export function MessengerApp({ me }: Props) {
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [limitsOpen, setLimitsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const lastMessageByPeerRef = useRef<Map<string, string>>(new Map());
   const chatsReadyRef = useRef(false);
 
   const selectedChat = chats.find((chat) => chat.user.id === peerId) ?? null;
-  const selected = selectedChat ?? (openedUser?.user.id === peerId ? openedUser : null);
+  const selected =
+    selectedChat ?? (openedUser?.user.id === peerId ? openedUser : null);
 
   const sidebarItems = useMemo<SidebarItem[]>(() => {
     if (!query.trim()) {
@@ -167,10 +180,13 @@ export function MessengerApp({ me }: Props) {
     const timer = window.setTimeout(async () => {
       setSearching(true);
       try {
-        const response = await fetch(`/api/users/search?q=${encodeURIComponent(cleanQuery)}`, {
-          cache: "no-store",
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `/api/users/search?q=${encodeURIComponent(cleanQuery)}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
         if (!response.ok) return;
         const data = (await response.json()) as { users: UserSearchResult[] };
         setSearchResults(data.users);
@@ -230,7 +246,12 @@ export function MessengerApp({ me }: Props) {
             onClick={() => setAccountOpen(true)}
             type="button"
           >
-            <svg aria-hidden="true" className="size-5" fill="currentColor" viewBox="0 0 24 24">
+            <svg
+              aria-hidden="true"
+              className="size-5"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
               <circle cx="12" cy="5" r="1.8" />
               <circle cx="12" cy="12" r="1.8" />
               <circle cx="12" cy="19" r="1.8" />
@@ -268,7 +289,9 @@ export function MessengerApp({ me }: Props) {
                 <li key={item.user.id}>
                   <button
                     className={`mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition ${
-                      active ? "bg-accent-muted ring-1 ring-[var(--accent)]/40" : "hover:bg-white/5"
+                      active
+                        ? "bg-accent-muted ring-1 ring-[var(--accent)]/40"
+                        : "hover:bg-white/5"
                     }`}
                     onClick={() => openConversation(item)}
                     type="button"
@@ -276,7 +299,7 @@ export function MessengerApp({ me }: Props) {
                     <UserAvatar
                       avatarUrl={item.user.avatarUrl}
                       className="size-10 cursor-pointer rounded-full text-sm"
-                      nickname={item.user.nickname}
+                      nickname={item.user.displayName || item.user.nickname}
                       onClick={(event) => {
                         event.stopPropagation();
                         setProfileId(item.user.id);
@@ -285,7 +308,11 @@ export function MessengerApp({ me }: Props) {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-medium"><RichText text={item.user.nickname} /></span>
+                        <span className="truncate text-sm font-medium">
+                          <RichText
+                            text={item.user.displayName || item.user.nickname}
+                          />
+                        </span>
                         {item.lastMessage ? (
                           <span className="shrink-0 text-[11px] text-[var(--muted-2)]">
                             {formatTime(item.lastMessage.createdAt)}
@@ -293,18 +320,26 @@ export function MessengerApp({ me }: Props) {
                         ) : null}
                       </span>
                       <span className="mt-0.5 flex items-center justify-between gap-2">
-                        <span className={`truncate text-xs ${item.state === "pending_in" ? "text-accent-soft" : "text-[var(--muted-2)]"}`}>
+                        <span
+                          className={`truncate text-xs ${item.state === "pending_in" ? "text-accent-soft" : "text-[var(--muted-2)]"}`}
+                        >
                           {item.lastMessage ? (
                             <>
-                              {item.lastMessage.senderId === me.userId ? "Вы: " : ""}
-                              <RichText text={previewText(item.lastMessage.content)} />
+                              {item.lastMessage.senderId === me.userId
+                                ? "Вы: "
+                                : ""}
+                              <RichText
+                                text={previewText(item.lastMessage.content)}
+                              />
                             </>
                           ) : (
                             stateLabel(item.state)
                           )}
                         </span>
                         {item.state === "pending_in" ? (
-                          <span className="rounded-full bg-accent-muted px-2 py-0.5 text-[10px] font-semibold text-accent-soft">Запрос</span>
+                          <span className="rounded-full bg-accent-muted px-2 py-0.5 text-[10px] font-semibold text-accent-soft">
+                            Запрос
+                          </span>
                         ) : item.unread > 0 ? (
                           <span className="grid min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-on-accent">
                             {item.unread}
@@ -320,13 +355,18 @@ export function MessengerApp({ me }: Props) {
         </ul>
       </aside>
 
-      <section className={`chat-wallpaper h-full min-w-0 flex-1 flex-col ${peerId ? "flex" : "hidden md:flex"}`}>
+      <section
+        className={`chat-wallpaper h-full min-w-0 flex-1 flex-col ${peerId ? "flex" : "hidden md:flex"}`}
+      >
         {!selected ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-            <span className="grid size-16 place-items-center rounded-3xl bg-accent-muted text-2xl font-semibold text-accent-soft">D</span>
+            <span className="grid size-16 place-items-center rounded-3xl bg-accent-muted text-2xl font-semibold text-accent-soft">
+              D
+            </span>
             <p className="text-lg font-medium">У вас пока нет открытого чата</p>
             <p className="max-w-sm text-sm text-[var(--muted-2)]">
-              Найдите пользователя по нику. Первое сообщение станет запросом на общение.
+              Найдите пользователя по нику. Первое сообщение станет запросом на
+              общение.
             </p>
           </div>
         ) : (
@@ -346,9 +386,14 @@ export function MessengerApp({ me }: Props) {
 
       {accountOpen ? (
         <AccountDrawer
+          displayName={me.displayName}
           nickname={me.nickname}
           onClose={() => setAccountOpen(false)}
           onLogout={logout}
+          onOpenLimits={() => {
+            setAccountOpen(false);
+            setLimitsOpen(true);
+          }}
           onOpenProfile={() => {
             setAccountOpen(false);
             setProfileId(me.userId);
@@ -359,7 +404,22 @@ export function MessengerApp({ me }: Props) {
           }}
         />
       ) : null}
-      {settingsOpen ? <SettingsPanel nickname={me.nickname} onClose={() => setSettingsOpen(false)} /> : null}
+      {limitsOpen ? (
+        <LimitsPanel
+          onClose={() => setLimitsOpen(false)}
+          onMessageAdmin={(admin) => {
+            setLimitsOpen(false);
+            openConversation(admin);
+          }}
+        />
+      ) : null}
+      {settingsOpen ? (
+        <SettingsPanel
+          isAdmin={Boolean(me.isAdmin)}
+          nickname={me.nickname}
+          onClose={() => setSettingsOpen(false)}
+        />
+      ) : null}
       {profileId ? (
         <ProfileSheet
           userId={profileId}
@@ -386,7 +446,12 @@ function Conversation({
   onOpenProfile,
 }: {
   me: SessionUser;
-  peer: { id: string; nickname: string; avatarUrl: string };
+  peer: {
+    id: string;
+    nickname: string;
+    displayName: string;
+    avatarUrl: string;
+  };
   initialState: ChatState;
   onBack: () => void;
   onAuthLost: () => void;
@@ -395,18 +460,22 @@ function Conversation({
   onOpenProfile: () => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [connectionState, setConnectionState] = useState<ChatState>(initialState);
+  const [connectionState, setConnectionState] =
+    useState<ChatState>(initialState);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [requestBusy, setRequestBusy] = useState(false);
   const [error, setError] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
-  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(
+    null,
+  );
   const afterRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const pressTimer = useRef<number | null>(null);
   const pressStart = useRef({ x: 0, y: 0 });
   const [enterIds, setEnterIds] = useState<string[]>([]);
+  const peerName = peer.displayName || peer.nickname;
 
   function clearPress() {
     if (pressTimer.current) {
@@ -437,7 +506,9 @@ function Conversation({
       const data = (await response.json()) as { message?: ChatMessage };
       if (!response.ok || !data.message) return;
       setMessages((current) =>
-        current.map((item) => (item.id === data.message!.id ? data.message! : item)),
+        current.map((item) =>
+          item.id === data.message!.id ? data.message! : item,
+        ),
       );
     } catch {
       /* ignore */
@@ -563,7 +634,10 @@ function Conversation({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ peerId: peer.id, action }),
       });
-      const data = (await response.json()) as { error?: string; state?: ChatState };
+      const data = (await response.json()) as {
+        error?: string;
+        state?: ChatState;
+      };
       if (!response.ok) {
         setError(data.error ?? "Не удалось обработать запрос");
         return;
@@ -597,7 +671,7 @@ function Conversation({
           ←
         </button>
         <button
-          aria-label={`Открыть профиль ${peer.nickname}`}
+          aria-label={`Открыть профиль ${peerName}`}
           className="flex min-w-0 items-center gap-3 text-left"
           onClick={onOpenProfile}
           title="Открыть профиль"
@@ -606,14 +680,16 @@ function Conversation({
           <UserAvatar
             avatarUrl={peer.avatarUrl}
             className="size-10 rounded-full text-sm ring-2 ring-[var(--accent)]/30"
-            nickname={peer.nickname}
+            nickname={peerName}
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">
-              <RichText text={peer.nickname} />
+              <RichText text={peerName} />
             </p>
             <p className="text-[11px] text-[var(--muted-2)]">
-              {connectionState === "accepted" ? "чат открыт" : stateLabel(connectionState)}
+              {connectionState === "accepted"
+                ? "чат открыт"
+                : stateLabel(connectionState)}
             </p>
           </div>
         </button>
@@ -660,14 +736,23 @@ function Conversation({
                     onContextMenu={(event) => {
                       event.preventDefault();
                       if (connectionState === "accepted") {
-                        openMenu(message.id, event.clientX, event.clientY, mine);
+                        openMenu(
+                          message.id,
+                          event.clientX,
+                          event.clientY,
+                          mine,
+                        );
                       }
                     }}
                     onPointerDown={(event) => {
                       if (connectionState !== "accepted") return;
-                      if (event.pointerType === "mouse" && event.button !== 0) return;
+                      if (event.pointerType === "mouse" && event.button !== 0)
+                        return;
                       clearPress();
-                      pressStart.current = { x: event.clientX, y: event.clientY };
+                      pressStart.current = {
+                        x: event.clientX,
+                        y: event.clientY,
+                      };
                       const x = event.clientX;
                       const y = event.clientY;
                       pressTimer.current = window.setTimeout(() => {
@@ -704,11 +789,15 @@ function Conversation({
                     </p>
                     <div
                       className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] ${
-                        mine ? "text-[var(--on-accent)]/60" : "text-[var(--muted-2)]"
+                        mine
+                          ? "text-[var(--on-accent)]/60"
+                          : "text-[var(--muted-2)]"
                       }`}
                     >
                       <span>{formatTime(message.createdAt)}</span>
-                      {mine ? <span className="text-[10px] font-bold">✓</span> : null}
+                      {mine ? (
+                        <span className="text-[10px] font-bold">✓</span>
+                      ) : null}
                     </div>
                     {message.reactions?.length ? (
                       <div className="mt-1.5 flex flex-wrap justify-end gap-1">
@@ -739,7 +828,10 @@ function Conversation({
       </div>
 
       {menu ? (
-        <div className="menu-overlay fixed inset-0 z-40" onClick={() => setMenu(null)}>
+        <div
+          className="menu-overlay fixed inset-0 z-40"
+          onClick={() => setMenu(null)}
+        >
           <div
             className="glass-menu menu-pop absolute overflow-hidden rounded-2xl py-1"
             onClick={(event) => event.stopPropagation()}
@@ -786,9 +878,12 @@ function Conversation({
 
       {connectionState === "pending_in" ? (
         <div className="border-t border-[var(--border)] bg-[var(--panel)]/80 p-4">
-          <p className="text-sm font-semibold">{peer.nickname} хочет начать общение</p>
+          <p className="text-sm font-semibold">
+            {peerName} хочет начать общение
+          </p>
           <p className="mt-1 text-xs leading-5 text-[var(--muted-2)]">
-            Примите запрос, чтобы вы оба могли отправлять сообщения, или отклоните его.
+            Примите запрос, чтобы вы оба могли отправлять сообщения, или
+            отклоните его.
           </p>
           {error ? <p className="mt-2 text-xs text-red-300">{error}</p> : null}
           <div className="mt-3 flex gap-2">
@@ -814,28 +909,33 @@ function Conversation({
         <div className="border-t border-[var(--border)] bg-[var(--panel)]/80 px-5 py-4 text-center">
           <p className="text-sm font-semibold">Запрос отправлен</p>
           <p className="mt-1 text-xs text-[var(--muted-2)]">
-            Можно будет писать дальше, когда {peer.nickname} примет запрос.
+            Можно будет писать дальше, когда {peerName} примет запрос.
           </p>
         </div>
       ) : connectionState === "blocked" ? (
         <div className="border-t border-[var(--border)] bg-[var(--panel)]/80 px-5 py-4 text-center">
           <p className="text-sm font-semibold">Запрос отклонён</p>
           <p className="mt-1 text-xs leading-5 text-[var(--muted-2)]">
-            Вы не можете написать снова. Теперь {peer.nickname} сможет отправить вам новый запрос первым.
+            Вы не можете написать снова. Теперь {peerName} сможет отправить вам
+            новый запрос первым.
           </p>
         </div>
       ) : (
-        <form className="border-t border-[var(--border)] p-3" onSubmit={(event) => void send(event)}>
+        <form
+          className="border-t border-[var(--border)] p-3"
+          onSubmit={(event) => void send(event)}
+        >
           {connectionState === "none" ? (
             <p className="mb-2 px-1 text-xs leading-5 text-[var(--muted-2)]">
-              Можно отправить одно сообщение. Остальные станут доступны после принятия запроса.
+              Можно отправить одно сообщение. Остальные станут доступны после
+              принятия запроса.
             </p>
           ) : null}
           {replyTo ? (
             <div className="mb-2 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-accent-soft">
-                  Ответ {replyTo.senderId === me.userId ? "себе" : peer.nickname}
+                  Ответ {replyTo.senderId === me.userId ? "себе" : peerName}
                 </p>
                 <p className="truncate text-xs text-[var(--muted-2)]">
                   <RichText text={replyTo.content} />
@@ -850,7 +950,9 @@ function Conversation({
               </button>
             </div>
           ) : null}
-          {error ? <p className="mb-2 px-1 text-xs text-red-300">{error}</p> : null}
+          {error ? (
+            <p className="mb-2 px-1 text-xs text-red-300">{error}</p>
+          ) : null}
           <div className="flex items-end gap-2">
             <textarea
               className="max-h-36 min-h-12 flex-1 resize-none rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm"
@@ -863,10 +965,10 @@ function Conversation({
               }}
               placeholder={
                 connectionState === "none"
-                  ? `Первое сообщение для ${peer.nickname}`
+                  ? `Первое сообщение для ${peerName}`
                   : replyTo
                     ? "Напишите ответ"
-                    : `Сообщение для ${peer.nickname}`
+                    : `Сообщение для ${peerName}`
               }
               rows={1}
               value={draft}

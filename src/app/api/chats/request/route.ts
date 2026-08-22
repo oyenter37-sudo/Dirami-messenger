@@ -2,11 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireSession } from "@/lib/api";
 import { chatPair } from "@/lib/chat-state";
+import {
+  consumeRateLimit,
+  getUserLimits,
+  MINUTE,
+  mutationGuard,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const guard = mutationGuard(request);
+  if (guard) return guard;
+
   const auth = await requireSession();
   if (auth.error) return auth.error;
 
@@ -19,13 +29,25 @@ export async function POST(request: Request) {
 
   const payload = body as { peerId?: unknown; action?: unknown };
   const peerId = typeof payload.peerId === "string" ? payload.peerId : "";
-  const action = payload.action === "accept" || payload.action === "decline"
-    ? payload.action
-    : null;
+  const action =
+    payload.action === "accept" || payload.action === "decline"
+      ? payload.action
+      : null;
   const me = auth.session.userId;
 
   if (!peerId || peerId === me || !action) {
     return jsonError("Некорректный запрос", 400);
+  }
+
+  const limits = await getUserLimits(me);
+  const actionLimit = await consumeRateLimit({
+    subject: `user:${me}`,
+    action: "request_action",
+    limit: limits.requestActionsPerMinute,
+    windowMs: MINUTE,
+  });
+  if (!actionLimit.allowed) {
+    return rateLimitResponse(actionLimit, "Слишком много действий с запросами");
   }
 
   const pair = chatPair(me, peerId);
@@ -41,11 +63,13 @@ export async function POST(request: Request) {
     return jsonError("Нельзя обработать собственный запрос", 403);
   }
 
-  const updated = await prisma.chat.update({
-    where: { id: chat.id },
+  const updated = await prisma.chat.updateMany({
+    where: { id: chat.id, status: "PENDING", initiatorId: peerId },
     data: { status: action === "accept" ? "ACCEPTED" : "DECLINED" },
-    select: { status: true },
   });
+  if (updated.count !== 1) {
+    return jsonError("Запрос уже был обработан", 409);
+  }
 
   if (action === "decline") {
     await prisma.message.updateMany({
@@ -56,6 +80,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    state: updated.status === "ACCEPTED" ? "accepted" : "none",
+    state: action === "accept" ? "accepted" : "none",
   });
 }

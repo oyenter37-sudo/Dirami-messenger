@@ -2,11 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireSession } from "@/lib/api";
 import { parseNickname } from "@/lib/validators";
+import {
+  consumeRateLimit,
+  getUserLimits,
+  HOUR,
+  mutationGuard,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const guard = mutationGuard(request);
+  if (guard) return guard;
+
   const auth = await requireSession();
   if (auth.error) return auth.error;
 
@@ -24,14 +34,26 @@ export async function POST(request: Request) {
   if (!nftId || !toNickname) {
     return jsonError("Укажи NFT и ник получателя", 400);
   }
-  if (toNickname.toLowerCase() === auth.session.nickname.toLowerCase()) {
-    return jsonError("Нельзя передать самому себе", 400);
+
+  const limits = await getUserLimits(auth.session.userId);
+  const transferLimit = await consumeRateLimit({
+    subject: `user:${auth.session.userId}`,
+    action: "nft_transfer",
+    limit: limits.nftTransfersPerHour,
+    windowMs: HOUR,
+  });
+  if (!transferLimit.allowed) {
+    return rateLimitResponse(
+      transferLimit,
+      `Можно передать не более ${limits.nftTransfersPerHour} NFT в час`,
+    );
   }
 
   const [nft, recipient] = await Promise.all([
     prisma.nft.findUnique({ where: { id: nftId } }),
     prisma.user.findFirst({
       where: { nickname: { equals: toNickname, mode: "insensitive" } },
+      select: { id: true },
     }),
   ]);
 
@@ -41,11 +63,18 @@ export async function POST(request: Request) {
   if (!recipient) {
     return jsonError("Пользователь не найден", 404);
   }
+  if (recipient.id === auth.session.userId) {
+    return jsonError("Нельзя передать самому себе", 400);
+  }
 
-  const updated = await prisma.nft.update({
-    where: { id: nft.id },
+  const transfer = await prisma.nft.updateMany({
+    where: { id: nft.id, ownerId: auth.session.userId },
     data: { ownerId: recipient.id },
   });
+  if (transfer.count !== 1) {
+    return jsonError("NFT уже был передан", 409);
+  }
 
+  const updated = await prisma.nft.findUnique({ where: { id: nft.id } });
   return NextResponse.json({ ok: true, nft: updated });
 }

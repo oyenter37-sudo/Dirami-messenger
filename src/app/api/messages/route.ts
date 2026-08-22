@@ -4,9 +4,20 @@ import { jsonError, requireSession } from "@/lib/api";
 import { chatPair, chatStateFor } from "@/lib/chat-state";
 import { parseMessageContent } from "@/lib/validators";
 import { serializeMessage } from "@/lib/serialize-message";
+import {
+  consumeRateLimit,
+  getUserLimits,
+  HOUR,
+  MINUTE,
+  mutationGuard,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+class PendingRequestLimitError extends Error {}
+class ChatStateChangedError extends Error {}
 
 const messageInclude = {
   replyTo: {
@@ -14,7 +25,7 @@ const messageInclude = {
       id: true,
       content: true,
       senderId: true,
-      sender: { select: { nickname: true } },
+      sender: { select: { nickname: true, displayName: true } },
     },
   },
   reactions: {
@@ -35,10 +46,24 @@ export async function GET(request: Request) {
   const me = auth.session.userId;
   if (peerId === me) return jsonError("Нельзя открыть чат с собой", 400);
 
+  const limits = await getUserLimits(me);
+  const readLimit = await consumeRateLimit({
+    subject: `user:${me}`,
+    action: "message_read",
+    limit: limits.messageReadsPerMinute,
+    windowMs: MINUTE,
+  });
+  if (!readLimit.allowed) {
+    return rateLimitResponse(
+      readLimit,
+      "Слишком много проверок новых сообщений",
+    );
+  }
+
   const [peer, chat] = await Promise.all([
     prisma.user.findUnique({
       where: { id: peerId },
-      select: { id: true, nickname: true },
+      select: { id: true, nickname: true, displayName: true },
     }),
     prisma.chat.findUnique({
       where: { userAId_userBId: chatPair(me, peerId) },
@@ -53,7 +78,8 @@ export async function GET(request: Request) {
   }
 
   const afterDate = after ? new Date(after) : null;
-  const validAfter = afterDate && !Number.isNaN(afterDate.getTime()) ? afterDate : null;
+  const validAfter =
+    afterDate && !Number.isNaN(afterDate.getTime()) ? afterDate : null;
 
   const messages = await prisma.message.findMany({
     where: {
@@ -87,6 +113,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const guard = mutationGuard(request);
+  if (guard) return guard;
+
   const auth = await requireSession();
   if (auth.error) return auth.error;
 
@@ -104,13 +133,28 @@ export async function POST(request: Request) {
   };
   const peerId = typeof payload.peerId === "string" ? payload.peerId : "";
   const content = parseMessageContent(payload.content);
-  const replyToId = typeof payload.replyToId === "string" ? payload.replyToId : null;
+  const replyToId =
+    typeof payload.replyToId === "string" ? payload.replyToId : null;
 
   if (!peerId) return jsonError("Не указан собеседник", 400);
   if (!content) return jsonError("Сообщение пустое или слишком длинное", 400);
 
   const me = auth.session.userId;
   if (peerId === me) return jsonError("Нельзя написать себе", 400);
+
+  const limits = await getUserLimits(me);
+  const messageLimit = await consumeRateLimit({
+    subject: `user:${me}`,
+    action: "message",
+    limit: limits.messagesPerMinute,
+    windowMs: MINUTE,
+  });
+  if (!messageLimit.allowed) {
+    return rateLimitResponse(
+      messageLimit,
+      `Можно отправить не более ${limits.messagesPerMinute} сообщений в минуту`,
+    );
+  }
 
   const [peer, chat] = await Promise.all([
     prisma.user.findUnique({ where: { id: peerId }, select: { id: true } }),
@@ -129,7 +173,10 @@ export async function POST(request: Request) {
     return jsonError("Сначала примите или отклоните запрос", 403);
   }
   if (state === "blocked") {
-    return jsonError("Пользователь отклонил запрос. Теперь он может написать первым", 403);
+    return jsonError(
+      "Пользователь отклонил запрос. Теперь он может написать первым",
+      403,
+    );
   }
 
   if (replyToId && state !== "accepted") {
@@ -160,24 +207,68 @@ export async function POST(request: Request) {
     });
     nextState = "accepted";
   } else {
-    const pair = chatPair(me, peerId);
-    message = await prisma.$transaction(async (tx) => {
-      if (chat?.status === "DECLINED") {
-        await tx.chat.update({
-          where: { id: chat.id },
-          data: { initiatorId: me, status: "PENDING" },
-        });
-      } else {
-        await tx.chat.create({
-          data: { ...pair, initiatorId: me, status: "PENDING" },
-        });
-      }
-
-      return tx.message.create({
-        data: { content, senderId: me, receiverId: peerId },
-        include: messageInclude,
-      });
+    const requestLimit = await consumeRateLimit({
+      subject: `user:${me}`,
+      action: "chat_request",
+      limit: limits.chatRequestsPerHour,
+      windowMs: HOUR,
     });
+    if (!requestLimit.allowed) {
+      return rateLimitResponse(
+        requestLimit,
+        `Можно создать не более ${limits.chatRequestsPerHour} новых запросов в час`,
+      );
+    }
+
+    const pair = chatPair(me, peerId);
+    try {
+      message = await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`chat-pair:${pair.userAId}:${pair.userBId}`}))`;
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`pending-request:${me}`}))`;
+
+        const currentChat = await tx.chat.findUnique({
+          where: { userAId_userBId: pair },
+          select: { id: true, status: true, initiatorId: true },
+        });
+        if (chatStateFor(currentChat, me) !== "none") {
+          throw new ChatStateChangedError();
+        }
+
+        const activeRequests = await tx.chat.count({
+          where: { initiatorId: me, status: "PENDING" },
+        });
+        if (activeRequests >= limits.pendingRequests) {
+          throw new PendingRequestLimitError();
+        }
+
+        if (currentChat?.status === "DECLINED") {
+          await tx.chat.update({
+            where: { id: currentChat.id },
+            data: { initiatorId: me, status: "PENDING" },
+          });
+        } else {
+          await tx.chat.create({
+            data: { ...pair, initiatorId: me, status: "PENDING" },
+          });
+        }
+
+        return tx.message.create({
+          data: { content, senderId: me, receiverId: peerId },
+          include: messageInclude,
+        });
+      });
+    } catch (error) {
+      if (error instanceof PendingRequestLimitError) {
+        return jsonError(
+          `Можно иметь не более ${limits.pendingRequests} одновременных исходящих запросов`,
+          429,
+        );
+      }
+      if (error instanceof ChatStateChangedError) {
+        return jsonError("Состояние чата изменилось. Обновите чат", 409);
+      }
+      throw error;
+    }
     nextState = "pending_out";
   }
 

@@ -20,20 +20,25 @@ async function main() {
 
   const mara = await prisma.user.upsert({
     where: { nickname: "mara" },
-    update: {},
-    create: { nickname: "mara", passwordHash },
+    update: { displayName: "Mara", isAdmin: true },
+    create: {
+      nickname: "mara",
+      displayName: "Mara",
+      passwordHash,
+      isAdmin: true,
+    },
   });
 
   const leo = await prisma.user.upsert({
     where: { nickname: "leo" },
     update: {},
-    create: { nickname: "leo", passwordHash },
+    create: { nickname: "leo", displayName: "Leo", passwordHash },
   });
 
   const nika = await prisma.user.upsert({
     where: { nickname: "nika" },
     update: {},
-    create: { nickname: "nika", passwordHash },
+    create: { nickname: "nika", displayName: "Nika", passwordHash },
   });
 
   const existing = await prisma.message.count();

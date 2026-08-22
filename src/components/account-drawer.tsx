@@ -6,63 +6,150 @@ import { UserAvatar } from "@/components/user-avatar";
 
 type Props = {
   nickname: string;
+  displayName?: string;
   onClose: () => void;
   onOpenProfile: () => void;
   onOpenSettings: () => void;
+  onOpenLimits: () => void;
   onLogout: () => Promise<void>;
 };
 
-type IconName = "profile" | "settings" | "logout";
+type IconName = "profile" | "settings" | "limits" | "logout";
 
 function MenuIcon({ name }: { name: IconName }) {
   if (name === "profile") {
     return (
-      <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 24 24">
-        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M4.8 20c.7-3.4 3.1-5.2 7.2-5.2s6.5 1.8 7.2 5.2" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      <svg
+        aria-hidden="true"
+        className="size-5"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <path
+          d="M4.8 20c.7-3.4 3.1-5.2 7.2-5.2s6.5 1.8 7.2 5.2"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
       </svg>
     );
   }
   if (name === "settings") {
     return (
-      <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 24 24">
-        <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M19.4 13.2a7.7 7.7 0 0 0 0-2.4l2-1.5-2-3.4-2.4 1a8.8 8.8 0 0 0-2-1.2L14.7 3h-4l-.4 2.7a8.8 8.8 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 2.4l-2 1.5 2 3.4 2.4-1a8.8 8.8 0 0 0 2 1.2l.4 2.7h4l.4-2.7a8.8 8.8 0 0 0 2-1.2l2.4 1 2-3.4-2.1-1.5Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.5" />
+      <svg
+        aria-hidden="true"
+        className="size-5"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <path
+          d="M19.4 13.2a7.7 7.7 0 0 0 0-2.4l2-1.5-2-3.4-2.4 1a8.8 8.8 0 0 0-2-1.2L14.7 3h-4l-.4 2.7a8.8 8.8 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 2.4l-2 1.5 2 3.4 2.4-1a8.8 8.8 0 0 0 2 1.2l.4 2.7h4l.4-2.7a8.8 8.8 0 0 0 2-1.2l2.4 1 2-3.4-2.1-1.5Z"
+          stroke="currentColor"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+        />
+      </svg>
+    );
+  }
+  if (name === "limits") {
+    return (
+      <svg
+        aria-hidden="true"
+        className="size-5"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M5 18a8 8 0 1 1 14 0"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
+        <path
+          d="m12 13 3.6-3.6"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
+        <circle
+          cx="12"
+          cy="13"
+          r="1.8"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+        <path
+          d="M7 18h10"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
       </svg>
     );
   }
   return (
     <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 24 24">
-      <path d="M10 5H5.8A1.8 1.8 0 0 0 4 6.8v10.4A1.8 1.8 0 0 0 5.8 19H10" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-      <path d="M14.5 8.5 18 12l-3.5 3.5M9 12h9" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      <path
+        d="M10 5H5.8A1.8 1.8 0 0 0 4 6.8v10.4A1.8 1.8 0 0 0 5.8 19H10"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M14.5 8.5 18 12l-3.5 3.5M9 12h9"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
     </svg>
   );
 }
 
 export function AccountDrawer({
   nickname,
+  displayName,
   onClose,
   onOpenProfile,
   onOpenSettings,
+  onOpenLimits,
   onLogout,
 }: Props) {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [currentDisplayName, setCurrentDisplayName] = useState(
+    displayName || nickname,
+  );
 
   useEffect(() => {
     let cancelled = false;
     void fetch("/api/auth/me", { cache: "no-store" })
       .then((response) => response.json())
-      .then((data: { user?: { avatarUrl?: string } }) => {
-        if (!cancelled) setAvatarUrl(data.user?.avatarUrl ?? "");
+      .then((data: { user?: { avatarUrl?: string; displayName?: string } }) => {
+        if (!cancelled) {
+          setAvatarUrl(data.user?.avatarUrl ?? "");
+          setCurrentDisplayName(
+            data.user?.displayName || displayName || nickname,
+          );
+        }
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [displayName, nickname]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -87,7 +174,10 @@ export function AccountDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/65" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-black/65"
+      onClick={onClose}
+    >
       <aside
         aria-label="Меню аккаунта"
         className="account-drawer-in relative flex h-full w-[min(88vw,380px)] flex-col border-l border-[var(--border)] bg-[var(--bg)] shadow-[-24px_0_70px_rgba(0,0,0,0.45)]"
@@ -99,7 +189,9 @@ export function AccountDrawer({
               D
             </span>
             <div>
-              <p className="text-[17px] font-extrabold"><RichText text="Dirami" /></p>
+              <p className="text-[17px] font-extrabold">
+                <RichText text="Dirami" />
+              </p>
               <p className="text-[11px] text-[var(--muted-2)]">Меню аккаунта</p>
             </div>
           </div>
@@ -118,11 +210,15 @@ export function AccountDrawer({
             <UserAvatar
               avatarUrl={avatarUrl}
               className="size-12 rounded-full text-sm"
-              nickname={nickname}
+              nickname={currentDisplayName}
             />
             <div className="min-w-0">
-              <p className="truncate text-sm font-extrabold"><RichText text={nickname} /></p>
-              <p className="truncate text-xs text-[var(--muted-2)]">@{nickname}</p>
+              <p className="truncate text-sm font-extrabold">
+                <RichText text={currentDisplayName} />
+              </p>
+              <p className="truncate text-xs text-[var(--muted-2)]">
+                @{nickname}
+              </p>
             </div>
           </div>
 
@@ -140,9 +236,13 @@ export function AccountDrawer({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-bold">Мой профиль</span>
-                <span className="block text-[11px] text-[var(--muted-2)]">Описание и коллекция NFT</span>
+                <span className="block text-[11px] text-[var(--muted-2)]">
+                  Описание и коллекция NFT
+                </span>
               </span>
-              <span className="text-lg text-[var(--muted-2)] transition group-hover:translate-x-0.5">›</span>
+              <span className="text-lg text-[var(--muted-2)] transition group-hover:translate-x-0.5">
+                ›
+              </span>
             </button>
 
             <button
@@ -155,9 +255,32 @@ export function AccountDrawer({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-bold">Настройки</span>
-                <span className="block text-[11px] text-[var(--muted-2)]">Тема, пароль и параметры</span>
+                <span className="block text-[11px] text-[var(--muted-2)]">
+                  Тема, пароль и параметры
+                </span>
               </span>
-              <span className="text-lg text-[var(--muted-2)] transition group-hover:translate-x-0.5">›</span>
+              <span className="text-lg text-[var(--muted-2)] transition group-hover:translate-x-0.5">
+                ›
+              </span>
+            </button>
+
+            <button
+              className="group flex w-full items-center gap-3 rounded-[1.25rem] border border-transparent px-3 py-3 text-left transition hover:border-[var(--border)] hover:bg-[var(--panel)]"
+              onClick={onOpenLimits}
+              type="button"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent-muted text-accent-soft">
+                <MenuIcon name="limits" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold">Dirami Limits</span>
+                <span className="block text-[11px] text-[var(--muted-2)]">
+                  Ваши лимиты и защита от спама
+                </span>
+              </span>
+              <span className="text-lg text-[var(--muted-2)] transition group-hover:translate-x-0.5">
+                ›
+              </span>
             </button>
           </div>
         </div>
@@ -173,7 +296,9 @@ export function AccountDrawer({
             </span>
             <span>
               <span className="block text-sm font-bold">Выйти</span>
-              <span className="block text-[11px] text-red-300/60">Завершить текущий сеанс</span>
+              <span className="block text-[11px] text-red-300/60">
+                Завершить текущий сеанс
+              </span>
             </span>
           </button>
         </div>
@@ -184,11 +309,16 @@ export function AccountDrawer({
               <span className="grid size-12 place-items-center rounded-2xl bg-red-500/10 text-red-300">
                 <MenuIcon name="logout" />
               </span>
-              <h3 className="mt-4 text-lg font-extrabold">Выйти из аккаунта?</h3>
+              <h3 className="mt-4 text-lg font-extrabold">
+                Выйти из аккаунта?
+              </h3>
               <p className="mt-1.5 text-sm leading-6 text-[var(--muted-2)]">
-                Вы уверены? Для возвращения потребуется снова ввести ник и пароль.
+                Вы уверены? Для возвращения потребуется снова ввести ник и
+                пароль.
               </p>
-              {logoutError ? <p className="mt-2 text-xs text-red-300">{logoutError}</p> : null}
+              {logoutError ? (
+                <p className="mt-2 text-xs text-red-300">{logoutError}</p>
+              ) : null}
               <div className="mt-5 flex gap-2">
                 <button
                   className="flex-1 rounded-full border border-[var(--border)] py-2.5 text-sm font-bold hover:bg-white/5"

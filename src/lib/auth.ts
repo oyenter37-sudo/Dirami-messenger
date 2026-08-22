@@ -14,11 +14,15 @@ function getSecret() {
   if (!secret) {
     throw new Error("AUTH_SECRET is not set");
   }
-  return new TextEncoder().encode(secret);
+  const encoded = new TextEncoder().encode(secret);
+  if (encoded.byteLength < 32) {
+    throw new Error("AUTH_SECRET must contain at least 32 bytes");
+  }
+  return encoded;
 }
 
 export async function hashPassword(password: string) {
-  return hash(password, 10);
+  return hash(password, 12);
 }
 
 export async function verifyPassword(password: string, passwordHash: string) {
@@ -26,20 +30,35 @@ export async function verifyPassword(password: string, passwordHash: string) {
 }
 
 export async function signSession(user: SessionUser) {
-  return new SignJWT({ userId: user.userId, nickname: user.nickname })
+  return new SignJWT({
+    userId: user.userId,
+    nickname: user.nickname,
+    sessionVersion: user.sessionVersion,
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
     .sign(getSecret());
 }
 
-export async function verifySessionToken(token: string): Promise<SessionUser | null> {
+export async function verifySessionToken(
+  token: string,
+): Promise<SessionUser | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    if (typeof payload.userId !== "string" || typeof payload.nickname !== "string") {
+    if (
+      typeof payload.userId !== "string" ||
+      typeof payload.nickname !== "string" ||
+      typeof payload.sessionVersion !== "number" ||
+      !Number.isInteger(payload.sessionVersion)
+    ) {
       return null;
     }
-    return { userId: payload.userId, nickname: payload.nickname };
+    return {
+      userId: payload.userId,
+      nickname: payload.nickname,
+      sessionVersion: payload.sessionVersion,
+    };
   } catch {
     return null;
   }

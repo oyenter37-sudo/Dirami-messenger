@@ -3,6 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api";
 import { chatStateFor } from "@/lib/chat-state";
 import type { UserSearchResult } from "@/lib/types";
+import {
+  consumeRateLimit,
+  getUserLimits,
+  MINUTE,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,18 +18,39 @@ export async function GET(request: Request) {
   if (auth.error) return auth.error;
 
   const url = new URL(request.url);
-  const query = (url.searchParams.get("q") ?? "").trim().replace(/^@/, "").slice(0, 24);
+  const query = (url.searchParams.get("q") ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .slice(0, 24);
   if (!query) return NextResponse.json({ users: [] });
 
   const me = auth.session.userId;
+  const limits = await getUserLimits(me);
+  const searchLimit = await consumeRateLimit({
+    subject: `user:${me}`,
+    action: "search",
+    limit: limits.searchesPerMinute,
+    windowMs: MINUTE,
+  });
+  if (!searchLimit.allowed) {
+    return rateLimitResponse(
+      searchLimit,
+      `Можно выполнять не более ${limits.searchesPerMinute} поисков в минуту`,
+    );
+  }
+
   const users = await prisma.user.findMany({
     where: {
       id: { not: me },
-      nickname: { contains: query, mode: "insensitive" },
+      OR: [
+        { nickname: { contains: query, mode: "insensitive" } },
+        { displayName: { contains: query, mode: "insensitive" } },
+      ],
     },
     select: {
       id: true,
       nickname: true,
+      displayName: true,
       bio: true,
       avatarUrl: true,
       profileAccent: true,
@@ -52,7 +79,10 @@ export async function GET(request: Request) {
     : [];
 
   const connectionByPeer = new Map(
-    connections.map((chat) => [chat.userAId === me ? chat.userBId : chat.userAId, chat]),
+    connections.map((chat) => [
+      chat.userAId === me ? chat.userBId : chat.userAId,
+      chat,
+    ]),
   );
 
   const results: UserSearchResult[] = users.map((user) => ({

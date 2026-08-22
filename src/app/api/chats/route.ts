@@ -3,6 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api";
 import { chatStateFor } from "@/lib/chat-state";
 import type { ChatPreview } from "@/lib/types";
+import {
+  MINUTE,
+  consumeRateLimit,
+  getUserLimits,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +18,20 @@ export async function GET() {
   if (auth.error) return auth.error;
 
   const me = auth.session.userId;
+  const limits = await getUserLimits(me);
+  const readLimit = await consumeRateLimit({
+    subject: `user:${me}`,
+    action: "chat_list",
+    limit: limits.chatListReadsPerMinute,
+    windowMs: MINUTE,
+  });
+  if (!readLimit.allowed) {
+    return rateLimitResponse(
+      readLimit,
+      "Слишком много обновлений списка чатов",
+    );
+  }
+
   const connections = await prisma.chat.findMany({
     where: {
       AND: [
@@ -24,6 +44,7 @@ export async function GET() {
         select: {
           id: true,
           nickname: true,
+          displayName: true,
           bio: true,
           avatarUrl: true,
           profileAccent: true,
@@ -34,6 +55,7 @@ export async function GET() {
         select: {
           id: true,
           nickname: true,
+          displayName: true,
           bio: true,
           avatarUrl: true,
           profileAccent: true,
@@ -49,7 +71,9 @@ export async function GET() {
   }
 
   const peers = new Set(
-    connections.map((chat) => (chat.userAId === me ? chat.userBId : chat.userAId)),
+    connections.map((chat) =>
+      chat.userAId === me ? chat.userBId : chat.userAId,
+    ),
   );
 
   const [messages, unreadGroups] = await Promise.all([
@@ -83,7 +107,8 @@ export async function GET() {
   >();
 
   for (const message of messages) {
-    const peerId = message.senderId === me ? message.receiverId : message.senderId;
+    const peerId =
+      message.senderId === me ? message.receiverId : message.senderId;
     if (!lastByPeer.has(peerId)) lastByPeer.set(peerId, message);
   }
 
@@ -93,7 +118,8 @@ export async function GET() {
 
   const chats: ChatPreview[] = connections
     .map((connection) => {
-      const user = connection.userAId === me ? connection.userB : connection.userA;
+      const user =
+        connection.userAId === me ? connection.userB : connection.userA;
       const last = lastByPeer.get(user.id) ?? null;
       const state = chatStateFor(connection, me);
 

@@ -1,6 +1,9 @@
 export type SessionUser = {
   userId: string;
   nickname: string;
+  sessionVersion: number;
+  displayName?: string;
+  isAdmin?: boolean;
 };
 
 export type NftItem = {
@@ -13,6 +16,7 @@ export type NftItem = {
 export type PublicUser = {
   id: string;
   nickname: string;
+  displayName: string;
   bio: string;
   avatarUrl: string;
   profileAccent: string;
@@ -21,7 +25,8 @@ export type PublicUser = {
   nfts?: NftItem[];
 };
 
-export type ChatState = "none" | "pending_out" | "pending_in" | "accepted" | "blocked";
+export type ChatState =
+  "none" | "pending_out" | "pending_in" | "accepted" | "blocked";
 
 export type ChatPreview = {
   user: PublicUser;
