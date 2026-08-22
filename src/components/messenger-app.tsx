@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { avatarColor, initials } from "@/lib/avatar";
+import { AccountDrawer } from "@/components/account-drawer";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SettingsPanel } from "@/components/settings-panel";
 import { AppleEmoji } from "@/components/apple-emoji";
@@ -35,6 +36,16 @@ function previewText(content: string) {
   return content.length > 42 ? `${content.slice(0, 42)}…` : content;
 }
 
+function messageDateLabel(iso: string) {
+  const date = new Date(iso);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) return "Сегодня";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Вчера";
+  return date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+}
+
 function stateLabel(state: ChatState) {
   if (state === "pending_in") return "Входящий запрос";
   if (state === "pending_out") return "Запрос отправлен";
@@ -56,6 +67,7 @@ export function MessengerApp({ me }: Props) {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const lastMessageByPeerRef = useRef<Map<string, string>>(new Map());
@@ -176,7 +188,8 @@ export function MessengerApp({ me }: Props) {
   }, [query]);
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    const response = await fetch("/api/auth/logout", { method: "POST" });
+    if (!response.ok) throw new Error("logout failed");
     goHome();
   }
 
@@ -202,40 +215,28 @@ export function MessengerApp({ me }: Props) {
           peerId ? "hidden md:flex" : "flex"
         }`}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-4">
+        <header className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3.5">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-2xl bg-accent text-sm font-semibold text-on-accent">
+            <span className="grid size-10 place-items-center rounded-2xl bg-accent text-sm font-black text-on-accent shadow-[0_10px_26px_-14px_var(--accent)]">
               D
             </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold"><RichText text="Dirami" /></p>
-              <p className="truncate text-xs text-[var(--muted-2)]"><RichText text={me.nickname} /></p>
-            </div>
+            <p className="truncate text-[17px] font-extrabold tracking-tight">
+              <RichText text="Dirami" />
+            </p>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              className="rounded-full px-3 py-1.5 text-xs text-[var(--muted-2)] hover:bg-white/5"
-              onClick={() => setProfileId(me.userId)}
-              type="button"
-            >
-              Мой профиль
-            </button>
-            <button
-              className="rounded-full px-3 py-1.5 text-xs text-[var(--muted-2)] hover:bg-white/5"
-              onClick={() => setSettingsOpen(true)}
-              type="button"
-            >
-              Настройки
-            </button>
-            <button
-              className="rounded-full px-3 py-1.5 text-xs text-[var(--muted-2)] hover:bg-white/5"
-              onClick={() => void logout()}
-              type="button"
-            >
-              Выйти
-            </button>
-          </div>
-        </div>
+          <button
+            aria-label="Открыть меню"
+            className="grid size-10 shrink-0 place-items-center rounded-full border border-transparent text-[var(--muted)] transition hover:border-[var(--border)] hover:bg-white/5 hover:text-white"
+            onClick={() => setAccountOpen(true)}
+            type="button"
+          >
+            <svg aria-hidden="true" className="size-5" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="5" r="1.8" />
+              <circle cx="12" cy="12" r="1.8" />
+              <circle cx="12" cy="19" r="1.8" />
+            </svg>
+          </button>
+        </header>
 
         <div className="px-3 py-3">
           <input
@@ -342,6 +343,21 @@ export function MessengerApp({ me }: Props) {
         )}
       </section>
 
+      {accountOpen ? (
+        <AccountDrawer
+          nickname={me.nickname}
+          onClose={() => setAccountOpen(false)}
+          onLogout={logout}
+          onOpenProfile={() => {
+            setAccountOpen(false);
+            setProfileId(me.userId);
+          }}
+          onOpenSettings={() => {
+            setAccountOpen(false);
+            setSettingsOpen(true);
+          }}
+        />
+      ) : null}
       {settingsOpen ? <SettingsPanel nickname={me.nickname} onClose={() => setSettingsOpen(false)} /> : null}
       {profileId ? (
         <ProfileSheet
@@ -608,89 +624,108 @@ function Conversation({
             {emptyText}
           </p>
         ) : (
-          messages.map((message) => {
+          messages.map((message, index) => {
             const mine = message.senderId === me.userId;
             const enter = enterIds.includes(message.id);
+            const previous = messages[index - 1];
+            const showDate =
+              !previous ||
+              new Date(previous.createdAt).toDateString() !==
+                new Date(message.createdAt).toDateString();
+
             return (
-              <div
-                key={message.id}
-                className={`flex ${mine ? "justify-end" : "justify-start"} ${
-                  enter ? (mine ? "msg-enter-mine" : "msg-enter-theirs") : ""
-                }`}
-              >
+              <div key={message.id}>
+                {showDate ? (
+                  <div className="my-4 flex justify-center first:mt-1">
+                    <span className="rounded-full border border-white/6 bg-[var(--panel)]/85 px-3 py-1 text-[10px] font-semibold text-[var(--muted-2)] shadow-sm">
+                      {messageDateLabel(message.createdAt)}
+                    </span>
+                  </div>
+                ) : null}
                 <div
-                  className={`no-select max-w-[78%] rounded-[1.4rem] px-4 py-2.5 shadow-[0_10px_28px_-18px_rgba(0,0,0,0.8)] ${
-                    mine
-                      ? "rounded-br-md bg-accent text-on-accent"
-                      : "rounded-bl-md bg-[var(--bubble-in)]"
+                  className={`flex ${mine ? "justify-end" : "justify-start"} ${
+                    enter ? (mine ? "msg-enter-mine" : "msg-enter-theirs") : ""
                   }`}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    if (connectionState === "accepted") {
-                      openMenu(message.id, event.clientX, event.clientY, mine);
-                    }
-                  }}
-                  onPointerDown={(event) => {
-                    if (connectionState !== "accepted") return;
-                    if (event.pointerType === "mouse" && event.button !== 0) return;
-                    clearPress();
-                    pressStart.current = { x: event.clientX, y: event.clientY };
-                    const x = event.clientX;
-                    const y = event.clientY;
-                    pressTimer.current = window.setTimeout(() => {
-                      window.getSelection()?.removeAllRanges();
-                      openMenu(message.id, x, y, mine);
-                    }, 430);
-                  }}
-                  onPointerUp={clearPress}
-                  onPointerCancel={clearPress}
-                  onPointerMove={(event) => {
-                    const dx = event.clientX - pressStart.current.x;
-                    const dy = event.clientY - pressStart.current.y;
-                    if (dx * dx + dy * dy > 100) clearPress();
-                  }}
                 >
-                  {message.replyTo ? (
+                  <div
+                    className={`message-bubble no-select relative max-w-[84%] rounded-[1.35rem] border px-3.5 py-2.5 shadow-[0_12px_30px_-22px_rgba(0,0,0,0.9)] sm:max-w-[72%] ${
+                      mine
+                        ? "message-bubble-mine rounded-br-[0.45rem] border-white/10 bg-accent text-on-accent"
+                        : "message-bubble-theirs rounded-bl-[0.45rem] border-white/6 bg-[var(--bubble-in)]"
+                    }`}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      if (connectionState === "accepted") {
+                        openMenu(message.id, event.clientX, event.clientY, mine);
+                      }
+                    }}
+                    onPointerDown={(event) => {
+                      if (connectionState !== "accepted") return;
+                      if (event.pointerType === "mouse" && event.button !== 0) return;
+                      clearPress();
+                      pressStart.current = { x: event.clientX, y: event.clientY };
+                      const x = event.clientX;
+                      const y = event.clientY;
+                      pressTimer.current = window.setTimeout(() => {
+                        window.getSelection()?.removeAllRanges();
+                        openMenu(message.id, x, y, mine);
+                      }, 430);
+                    }}
+                    onPointerUp={clearPress}
+                    onPointerCancel={clearPress}
+                    onPointerMove={(event) => {
+                      const dx = event.clientX - pressStart.current.x;
+                      const dy = event.clientY - pressStart.current.y;
+                      if (dx * dx + dy * dy > 100) clearPress();
+                    }}
+                  >
+                    {message.replyTo ? (
+                      <div
+                        className={`mb-2 rounded-xl border-l-[3px] px-2.5 py-1.5 text-xs ${
+                          mine
+                            ? "border-[var(--on-accent)]/45 bg-black/10"
+                            : "border-[var(--accent)] bg-black/15"
+                        }`}
+                      >
+                        <p className="text-[11px] font-bold">
+                          <RichText text={message.replyTo.nickname} />
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] opacity-70">
+                          <RichText text={message.replyTo.content} />
+                        </p>
+                      </div>
+                    ) : null}
+                    <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.55]">
+                      <RichText text={message.content} />
+                    </p>
                     <div
-                      className={`mb-2 rounded-xl border-l-2 px-2 py-1 text-xs ${
-                        mine
-                          ? "border-[var(--on-accent)]/50 bg-black/10"
-                          : "border-[var(--accent)] bg-black/20"
+                      className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] ${
+                        mine ? "text-[var(--on-accent)]/60" : "text-[var(--muted-2)]"
                       }`}
                     >
-                      <p className="font-medium">
-                        <RichText text={message.replyTo.nickname} />
-                      </p>
-                      <p className="truncate opacity-80">
-                        <RichText text={message.replyTo.content} />
-                      </p>
+                      <span>{formatTime(message.createdAt)}</span>
+                      {mine ? <span className="text-[10px] font-bold">✓</span> : null}
                     </div>
-                  ) : null}
-                  <p className="whitespace-pre-wrap break-words text-sm leading-7">
-                    <RichText text={message.content} />
-                  </p>
-                  <p className={`mt-1 text-[10px] ${mine ? "opacity-70" : "text-[var(--muted-2)]"}`}>
-                    {formatTime(message.createdAt)}
-                  </p>
-                  {message.reactions?.length ? (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {message.reactions.map((reaction) => (
-                        <span
-                          key={reaction.emoji}
-                          className={`rounded-full px-1.5 py-0.5 text-[11px] ${
-                            reaction.mine
-                              ? "bg-white/25"
-                              : mine
-                                ? "bg-black/10"
-                                : "bg-black/20"
-                          }`}
-                        >
-                          <AppleEmoji emoji={reaction.emoji} />
-                          {reaction.count > 1 ? ` ${reaction.count}` : ""}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+                    {message.reactions?.length ? (
+                      <div className="mt-1.5 flex flex-wrap justify-end gap-1">
+                        {message.reactions.map((reaction) => (
+                          <span
+                            key={reaction.emoji}
+                            className={`rounded-full border px-1.5 py-0.5 text-[11px] shadow-sm ${
+                              reaction.mine
+                                ? "border-white/25 bg-white/20"
+                                : mine
+                                  ? "border-black/5 bg-black/10"
+                                  : "border-white/6 bg-black/20"
+                            }`}
+                          >
+                            <AppleEmoji emoji={reaction.emoji} />
+                            {reaction.count > 1 ? ` ${reaction.count}` : ""}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             );

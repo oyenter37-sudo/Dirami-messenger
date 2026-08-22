@@ -316,12 +316,12 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
 
         {detailsGroup ? (
           <div
-            className="absolute inset-0 z-30 flex items-end bg-black/75 backdrop-blur-sm sm:items-center sm:p-5"
+            className="absolute inset-0 z-30 flex items-end bg-black/75 sm:items-center sm:p-5"
             onClick={() => setDetailsKey(null)}
           >
             <section
               aria-label={`Экземпляры ${detailsGroup.name}`}
-              className="profile-in flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] border border-[var(--border)] bg-[var(--bg)] shadow-[0_30px_90px_rgba(0,0,0,0.65)] sm:max-h-[82vh] sm:rounded-[2rem]"
+              className="nft-sheet-in flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] border border-[var(--border)] bg-[var(--bg)] shadow-[0_30px_90px_rgba(0,0,0,0.65)] sm:max-h-[82vh] sm:rounded-[2rem]"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="flex justify-center pt-2.5 sm:hidden">
@@ -431,7 +431,7 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
 
         {transfer ? (
           <div
-            className="absolute inset-0 z-40 flex items-end bg-black/75 p-3 backdrop-blur-sm sm:items-center sm:p-5"
+            className="absolute inset-0 z-40 flex items-end bg-black/75 p-3 sm:items-center sm:p-5"
             onClick={() => setTransfer(null)}
           >
             <div

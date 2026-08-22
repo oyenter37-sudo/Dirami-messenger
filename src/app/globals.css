@@ -209,20 +209,33 @@ input:focus {
 }
 
 @keyframes profile-in {
-  0% {
+  from {
     opacity: 0;
-    transform: translateY(48px) scale(0.84);
-    filter: blur(12px);
+    transform: translate3d(0, 18px, 0) scale(0.985);
   }
-  58% {
+  to {
     opacity: 1;
-    filter: blur(0);
-    transform: translateY(-8px) scale(1.03);
+    transform: translate3d(0, 0, 0) scale(1);
   }
-  100% {
+}
+
+@keyframes nft-sheet-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+  }
+  to {
     opacity: 1;
-    transform: none;
-    filter: none;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes account-drawer-in {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -238,38 +251,24 @@ input:focus {
 }
 
 @keyframes msg-mine {
-  0% {
+  from {
     opacity: 0;
-    transform: translate3d(36px, 18px, 0) scale(0.78);
-    filter: blur(6px);
+    transform: translate3d(12px, 8px, 0) scale(0.97);
   }
-  62% {
+  to {
     opacity: 1;
-    filter: blur(0);
-    transform: translate3d(-4px, -2px, 0) scale(1.04);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-    filter: none;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes msg-theirs {
-  0% {
+  from {
     opacity: 0;
-    transform: translate3d(-36px, 18px, 0) scale(0.78);
-    filter: blur(6px);
+    transform: translate3d(-12px, 8px, 0) scale(0.97);
   }
-  62% {
+  to {
     opacity: 1;
-    filter: blur(0);
-    transform: translate3d(4px, -2px, 0) scale(1.04);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-    filter: none;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -289,19 +288,49 @@ input:focus {
 }
 
 .profile-in {
-  animation: profile-in 0.62s cubic-bezier(0.22, 1.15, 0.28, 1) both;
+  animation: profile-in 0.24s ease-out both;
+}
+
+.nft-sheet-in {
+  animation: nft-sheet-in 0.2s ease-out both;
+  backface-visibility: hidden;
 }
 
 .sheet-in {
-  animation: sheet-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: sheet-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.account-drawer-in {
+  animation: account-drawer-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+  backface-visibility: hidden;
 }
 
 .msg-enter-mine {
-  animation: msg-mine 0.52s cubic-bezier(0.22, 1.25, 0.36, 1) both;
+  animation: msg-mine 0.24s ease-out both;
 }
 
 .msg-enter-theirs {
-  animation: msg-theirs 0.52s cubic-bezier(0.22, 1.25, 0.36, 1) both;
+  animation: msg-theirs 0.24s ease-out both;
+}
+
+.message-bubble::after {
+  position: absolute;
+  bottom: -1px;
+  width: 10px;
+  height: 12px;
+  content: "";
+}
+
+.message-bubble-mine::after {
+  right: -5px;
+  background: var(--accent);
+  clip-path: polygon(0 0, 100% 100%, 0 76%);
+}
+
+.message-bubble-theirs::after {
+  left: -5px;
+  background: var(--bubble-in);
+  clip-path: polygon(100% 0, 100% 76%, 0 100%);
 }
 
 .menu-overlay {
@@ -349,23 +378,41 @@ input:focus {
 
 .dirami-shimmer {
   background-image: linear-gradient(
-    100deg,
-    #7dd3fc 0%,
-    #2563eb 28%,
-    #ffffff 50%,
-    #38bdf8 72%,
-    #7dd3fc 100%
+    105deg,
+    #73c9f2 0%,
+    #3b82d0 32%,
+    #eefaff 50%,
+    #45b5e8 68%,
+    #73c9f2 100%
   );
-  background-size: 220% 100%;
+  background-position: 5% 50%;
+  background-size: 260% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   font-weight: 700;
-  animation: dirami-shine 2.2s linear infinite;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: dirami-shine 4s ease-in-out infinite alternate;
 }
 
 @keyframes dirami-shine {
+  from {
+    background-position: 5% 50%;
+  }
   to {
-    background-position: 220% 0;
+    background-position: 95% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dirami-shimmer,
+  .profile-in,
+  .nft-sheet-in,
+  .sheet-in,
+  .account-drawer-in,
+  .msg-enter-mine,
+  .msg-enter-theirs {
+    animation: none;
   }
 }
