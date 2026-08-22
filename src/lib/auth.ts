@@ -14,11 +14,7 @@ function getSecret() {
   if (!secret) {
     throw new Error("AUTH_SECRET is not set");
   }
-  const encoded = new TextEncoder().encode(secret);
-  if (encoded.byteLength < 32) {
-    throw new Error("AUTH_SECRET must contain at least 32 bytes");
-  }
-  return encoded;
+  return new TextEncoder().encode(secret);
 }
 
 export async function hashPassword(password: string) {

@@ -5,11 +5,10 @@ import { SESSION_COOKIE } from "@/lib/constants";
 async function hasSession(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const secret = process.env.AUTH_SECRET;
-  const encodedSecret = secret ? new TextEncoder().encode(secret) : null;
-  if (!token || !encodedSecret || encodedSecret.byteLength < 32) return false;
+  if (!token || !secret) return false;
 
   try {
-    await jwtVerify(token, encodedSecret);
+    await jwtVerify(token, new TextEncoder().encode(secret));
     return true;
   } catch {
     return false;
