@@ -8,7 +8,14 @@ import { SettingsPanel } from "@/components/settings-panel";
 import { AppleEmoji } from "@/components/apple-emoji";
 import { RichText } from "@/components/rich-text";
 import { REACTIONS } from "@/lib/reactions";
-import type { ChatMessage, ChatPreview, SessionUser } from "@/lib/types";
+import { playMessageSound, unlockMessageSounds } from "@/lib/message-sounds";
+import type {
+  ChatMessage,
+  ChatPreview,
+  ChatState,
+  SessionUser,
+  UserSearchResult,
+} from "@/lib/types";
 
 type Props = {
   me: SessionUser;
@@ -28,21 +35,54 @@ function previewText(content: string) {
   return content.length > 42 ? `${content.slice(0, 42)}…` : content;
 }
 
+function stateLabel(state: ChatState) {
+  if (state === "pending_in") return "Входящий запрос";
+  if (state === "pending_out") return "Запрос отправлен";
+  if (state === "blocked") return "Запрос отклонён";
+  if (state === "accepted") return "В ваших чатах";
+  return "Можно написать";
+}
+
+type SidebarItem = UserSearchResult & {
+  lastMessage: ChatPreview["lastMessage"];
+  unread: number;
+};
+
 export function MessengerApp({ me }: Props) {
   const router = useRouter();
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [peerId, setPeerId] = useState<string | null>(null);
+  const [openedUser, setOpenedUser] = useState<UserSearchResult | null>(null);
   const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const lastMessageByPeerRef = useRef<Map<string, string>>(new Map());
+  const chatsReadyRef = useRef(false);
 
-  const selected = chats.find((chat) => chat.user.id === peerId) ?? null;
+  const selectedChat = chats.find((chat) => chat.user.id === peerId) ?? null;
+  const selected = selectedChat ?? (openedUser?.user.id === peerId ? openedUser : null);
 
-  const visibleChats = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return chats;
-    return chats.filter((chat) => chat.user.nickname.toLowerCase().includes(q));
-  }, [chats, query]);
+  const sidebarItems = useMemo<SidebarItem[]>(() => {
+    if (!query.trim()) {
+      return chats.map((chat) => ({
+        user: chat.user,
+        state: chat.state,
+        lastMessage: chat.lastMessage,
+        unread: chat.unread,
+      }));
+    }
+
+    return searchResults.map((result) => {
+      const chat = chats.find((item) => item.user.id === result.user.id);
+      return {
+        ...result,
+        lastMessage: chat?.lastMessage ?? null,
+        unread: chat?.unread ?? 0,
+      };
+    });
+  }, [chats, query, searchResults]);
 
   const goHome = useCallback(() => {
     router.replace("/");
@@ -57,8 +97,35 @@ export function MessengerApp({ me }: Props) {
     }
     if (!response.ok) return;
     const data = (await response.json()) as { chats: ChatPreview[] };
+
+    const nextLastMessages = new Map<string, string>();
+    let hasFreshIncoming = false;
+    for (const chat of data.chats) {
+      if (!chat.lastMessage) continue;
+      nextLastMessages.set(chat.user.id, chat.lastMessage.id);
+      if (
+        chatsReadyRef.current &&
+        chat.lastMessage.senderId !== me.userId &&
+        lastMessageByPeerRef.current.get(chat.user.id) !== chat.lastMessage.id
+      ) {
+        hasFreshIncoming = true;
+      }
+    }
+    lastMessageByPeerRef.current = nextLastMessages;
+    if (hasFreshIncoming) playMessageSound("receive");
+    chatsReadyRef.current = true;
     setChats(data.chats);
-  }, [goHome]);
+  }, [goHome, me.userId]);
+
+  useEffect(() => {
+    const unlock = () => void unlockMessageSounds();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,19 +140,58 @@ export function MessengerApp({ me }: Props) {
     };
 
     void tick();
-    const timer = window.setInterval(() => {
-      void tick();
-    }, 4000);
-
+    const timer = window.setInterval(() => void tick(), 4000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
   }, [loadChats]);
 
+  useEffect(() => {
+    const cleanQuery = query.trim();
+    if (!cleanQuery) return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const response = await fetch(`/api/users/search?q=${encodeURIComponent(cleanQuery)}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as { users: UserSearchResult[] };
+        setSearchResults(data.users);
+      } catch {
+        if (!controller.signal.aborted) setSearchResults([]);
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     goHome();
+  }
+
+  function openConversation(item: UserSearchResult) {
+    setOpenedUser(item);
+    setPeerId(item.user.id);
+    setQuery("");
+  }
+
+  async function relationshipChanged(action?: "accept" | "decline") {
+    await loadChats();
+    if (action === "decline") {
+      setPeerId(null);
+      setOpenedUser(null);
+    }
   }
 
   return (
@@ -102,12 +208,8 @@ export function MessengerApp({ me }: Props) {
               D
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold">
-                <RichText text="Dirami" />
-              </p>
-              <p className="truncate text-xs text-[var(--muted-2)]">
-                <RichText text={me.nickname} />
-              </p>
+              <p className="text-sm font-semibold"><RichText text="Dirami" /></p>
+              <p className="truncate text-xs text-[var(--muted-2)]"><RichText text={me.nickname} /></p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -139,64 +241,71 @@ export function MessengerApp({ me }: Props) {
           <input
             className="w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-2.5 text-sm placeholder:text-[var(--muted-2)]"
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Поиск"
+            placeholder="Найти пользователя по нику"
             value={query}
           />
         </div>
 
         <ul className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-          {visibleChats.length === 0 ? (
-            <li className="px-3 py-6 text-sm text-[var(--muted-2)]">
-              Пока нет других пользователей.
+          {searching && query.trim() ? (
+            <li className="px-3 py-6 text-sm text-[var(--muted-2)]">Ищем…</li>
+          ) : sidebarItems.length === 0 ? (
+            <li className="px-5 py-10 text-center">
+              <p className="text-sm font-medium">
+                {query.trim() ? "Никого не найдено" : "У вас пока нет чатов"}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-[var(--muted-2)]">
+                {query.trim()
+                  ? "Проверьте ник и попробуйте ещё раз."
+                  : "Найдите человека по нику и отправьте ему первое сообщение."}
+              </p>
             </li>
           ) : (
-            visibleChats.map((chat) => {
-              const active = chat.user.id === peerId;
+            sidebarItems.map((item) => {
+              const active = item.user.id === peerId;
               return (
-                <li key={chat.user.id}>
+                <li key={item.user.id}>
                   <button
                     className={`mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition ${
                       active ? "bg-accent-muted ring-1 ring-[var(--accent)]/40" : "hover:bg-white/5"
                     }`}
-                    onClick={() => setPeerId(chat.user.id)}
+                    onClick={() => openConversation(item)}
                     type="button"
                   >
                     <span
-                      className={`grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold text-white ${avatarColor(
-                        chat.user.nickname,
-                      )}`}
+                      className={`grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold text-white ${avatarColor(item.user.nickname)}`}
                       onClick={(event) => {
                         event.stopPropagation();
-                        setProfileId(chat.user.id);
+                        setProfileId(item.user.id);
                       }}
                     >
-                      {initials(chat.user.nickname)}
+                      {initials(item.user.nickname)}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-medium">
-                          <RichText text={chat.user.nickname} />
-                        </span>
-                        {chat.lastMessage ? (
+                        <span className="truncate text-sm font-medium"><RichText text={item.user.nickname} /></span>
+                        {item.lastMessage ? (
                           <span className="shrink-0 text-[11px] text-[var(--muted-2)]">
-                            {formatTime(chat.lastMessage.createdAt)}
+                            {formatTime(item.lastMessage.createdAt)}
                           </span>
                         ) : null}
                       </span>
                       <span className="mt-0.5 flex items-center justify-between gap-2">
-                        <span className="truncate text-xs text-[var(--muted-2)]">
-                          {chat.lastMessage ? (
+                        <span className={`truncate text-xs ${item.state === "pending_in" ? "text-accent-soft" : "text-[var(--muted-2)]"}`}>
+                          {item.lastMessage ? (
                             <>
-                              {chat.lastMessage.senderId === me.userId ? "Вы: " : ""}
-                              <RichText text={previewText(chat.lastMessage.content)} />
+                              {item.lastMessage.senderId === me.userId ? "Вы: " : ""}
+                              <RichText text={previewText(item.lastMessage.content)} />
                             </>
                           ) : (
-                            "Нет сообщений"
+                            stateLabel(item.state)
                           )}
                         </span>
-                        {chat.unread > 0 ? (
+                        {item.state === "pending_in" ? (
+                          <span className="rounded-full bg-accent-muted px-2 py-0.5 text-[10px] font-semibold text-accent-soft">Запрос</span>
+                        ) : item.unread > 0 ? (
                           <span className="grid min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-on-accent">
-                            {chat.unread}
+                            {item.unread}
                           </span>
                         ) : null}
                       </span>
@@ -209,17 +318,13 @@ export function MessengerApp({ me }: Props) {
         </ul>
       </aside>
 
-      <section
-        className={`chat-wallpaper h-full min-w-0 flex-1 flex-col ${peerId ? "flex" : "hidden md:flex"}`}
-      >
+      <section className={`chat-wallpaper h-full min-w-0 flex-1 flex-col ${peerId ? "flex" : "hidden md:flex"}`}>
         {!selected ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-            <span className="grid size-16 place-items-center rounded-3xl bg-accent-muted text-2xl font-semibold text-accent-soft">
-              D
-            </span>
-            <p className="text-lg font-medium">Выберите чат</p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <span className="grid size-16 place-items-center rounded-3xl bg-accent-muted text-2xl font-semibold text-accent-soft">D</span>
+            <p className="text-lg font-medium">У вас пока нет открытого чата</p>
             <p className="max-w-sm text-sm text-[var(--muted-2)]">
-              Слева все, кто уже зарегистрировался.
+              Найдите пользователя по нику. Первое сообщение станет запросом на общение.
             </p>
           </div>
         ) : (
@@ -227,22 +332,22 @@ export function MessengerApp({ me }: Props) {
             key={selected.user.id}
             me={me}
             peer={selected.user}
+            initialState={selected.state}
             onBack={() => setPeerId(null)}
             onAuthLost={goHome}
             onSent={() => void loadChats()}
+            onRelationshipChanged={(action) => void relationshipChanged(action)}
             onOpenProfile={() => setProfileId(selected.user.id)}
           />
         )}
       </section>
 
-      {settingsOpen ? (
-        <SettingsPanel nickname={me.nickname} onClose={() => setSettingsOpen(false)} />
-      ) : null}
+      {settingsOpen ? <SettingsPanel nickname={me.nickname} onClose={() => setSettingsOpen(false)} /> : null}
       {profileId ? (
         <ProfileSheet
           userId={profileId}
           meId={me.userId}
-          fallback={chats.find((chat) => chat.user.id === profileId)?.user}
+          fallback={chats.find((chat) => chat.user.id === profileId)?.user ?? openedUser?.user}
           onClose={() => setProfileId(null)}
         />
       ) : null}
@@ -253,21 +358,27 @@ export function MessengerApp({ me }: Props) {
 function Conversation({
   me,
   peer,
+  initialState,
   onBack,
   onAuthLost,
   onSent,
+  onRelationshipChanged,
   onOpenProfile,
 }: {
   me: SessionUser;
   peer: { id: string; nickname: string };
+  initialState: ChatState;
   onBack: () => void;
   onAuthLost: () => void;
   onSent: () => void;
+  onRelationshipChanged: (action?: "accept" | "decline") => void;
   onOpenProfile: () => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [connectionState, setConnectionState] = useState<ChatState>(initialState);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [requestBusy, setRequestBusy] = useState(false);
   const [error, setError] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -333,8 +444,12 @@ function Conversation({
         }
         if (!response.ok || cancelled) return;
 
-        const data = (await response.json()) as { messages: ChatMessage[] };
+        const data = (await response.json()) as {
+          messages: ChatMessage[];
+          state: ChatState;
+        };
         if (cancelled) return;
+        setConnectionState(data.state);
 
         if (!incremental) {
           setMessages(data.messages);
@@ -391,6 +506,7 @@ function Conversation({
       });
       const data = (await response.json()) as {
         message?: ChatMessage;
+        state?: ChatState;
         error?: string;
       };
       if (!response.ok || !data.message) {
@@ -407,6 +523,8 @@ function Conversation({
           : [...current, data.message!],
       );
       afterRef.current = data.message.createdAt;
+      if (data.state) setConnectionState(data.state);
+      playMessageSound("send");
       onSent();
     } catch {
       setError("Сеть недоступна");
@@ -414,6 +532,39 @@ function Conversation({
       setSending(false);
     }
   }
+
+  async function handleRequest(action: "accept" | "decline") {
+    if (requestBusy) return;
+    setRequestBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/chats/request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ peerId: peer.id, action }),
+      });
+      const data = (await response.json()) as { error?: string; state?: ChatState };
+      if (!response.ok) {
+        setError(data.error ?? "Не удалось обработать запрос");
+        return;
+      }
+      setConnectionState(action === "accept" ? "accepted" : "none");
+      onRelationshipChanged(action);
+    } catch {
+      setError("Сеть недоступна");
+    } finally {
+      setRequestBusy(false);
+    }
+  }
+
+  const emptyText =
+    connectionState === "blocked"
+      ? "Запрос отклонён"
+      : connectionState === "pending_out"
+        ? "Запрос отправлен"
+        : connectionState === "pending_in"
+          ? "Входящий запрос на общение"
+          : "Напишите первое сообщение";
 
   return (
     <>
@@ -441,7 +592,9 @@ function Conversation({
             <p className="truncate text-sm font-semibold">
               <RichText text={peer.nickname} />
             </p>
-            <p className="text-[11px] text-[var(--muted-2)]">профиль</p>
+            <p className="text-[11px] text-[var(--muted-2)]">
+              {connectionState === "accepted" ? "чат открыт" : stateLabel(connectionState)}
+            </p>
           </div>
         </button>
       </header>
@@ -452,7 +605,7 @@ function Conversation({
       >
         {messages.length === 0 ? (
           <p className="py-12 text-center text-sm text-[var(--muted-2)]">
-            Напишите первое сообщение
+            {emptyText}
           </p>
         ) : (
           messages.map((message) => {
@@ -473,9 +626,12 @@ function Conversation({
                   }`}
                   onContextMenu={(event) => {
                     event.preventDefault();
-                    openMenu(message.id, event.clientX, event.clientY, mine);
+                    if (connectionState === "accepted") {
+                      openMenu(message.id, event.clientX, event.clientY, mine);
+                    }
                   }}
                   onPointerDown={(event) => {
+                    if (connectionState !== "accepted") return;
                     if (event.pointerType === "mouse" && event.button !== 0) return;
                     clearPress();
                     pressStart.current = { x: event.clientX, y: event.clientY };
@@ -589,50 +745,103 @@ function Conversation({
         </div>
       ) : null}
 
-      <form className="border-t border-[var(--border)] p-3" onSubmit={(event) => void send(event)}>
-        {replyTo ? (
-          <div className="mb-2 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium text-accent-soft">
-                Ответ {replyTo.senderId === me.userId ? "себе" : peer.nickname}
-              </p>
-              <p className="truncate text-xs text-[var(--muted-2)]">
-                <RichText text={replyTo.content} />
-              </p>
-            </div>
+      {connectionState === "pending_in" ? (
+        <div className="border-t border-[var(--border)] bg-[var(--panel)]/80 p-4">
+          <p className="text-sm font-semibold">{peer.nickname} хочет начать общение</p>
+          <p className="mt-1 text-xs leading-5 text-[var(--muted-2)]">
+            Примите запрос, чтобы вы оба могли отправлять сообщения, или отклоните его.
+          </p>
+          {error ? <p className="mt-2 text-xs text-red-300">{error}</p> : null}
+          <div className="mt-3 flex gap-2">
             <button
-              className="shrink-0 text-xs text-[var(--muted-2)]"
-              onClick={() => setReplyTo(null)}
+              className="flex-1 rounded-full border border-[var(--border)] py-2.5 text-sm font-semibold hover:bg-white/5 disabled:opacity-50"
+              disabled={requestBusy}
+              onClick={() => void handleRequest("decline")}
               type="button"
             >
-              Снять
+              Отклонить
+            </button>
+            <button
+              className="hover-accent flex-1 rounded-full bg-accent py-2.5 text-sm font-semibold text-on-accent disabled:opacity-50"
+              disabled={requestBusy}
+              onClick={() => void handleRequest("accept")}
+              type="button"
+            >
+              Принять
             </button>
           </div>
-        ) : null}
-        {error ? <p className="mb-2 px-1 text-xs text-red-300">{error}</p> : null}
-        <div className="flex items-end gap-2">
-          <textarea
-            className="max-h-36 min-h-12 flex-1 resize-none rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm"
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-            placeholder={replyTo ? "Напишите ответ" : `Сообщение для ${peer.nickname}`}
-            rows={1}
-            value={draft}
-          />
-          <button
-            className="hover-accent rounded-full bg-accent px-4 py-3 text-sm font-semibold text-on-accent disabled:opacity-50"
-            disabled={sending || !draft.trim()}
-            type="submit"
-          >
-            Отправить
-          </button>
         </div>
-      </form>
+      ) : connectionState === "pending_out" ? (
+        <div className="border-t border-[var(--border)] bg-[var(--panel)]/80 px-5 py-4 text-center">
+          <p className="text-sm font-semibold">Запрос отправлен</p>
+          <p className="mt-1 text-xs text-[var(--muted-2)]">
+            Можно будет писать дальше, когда {peer.nickname} примет запрос.
+          </p>
+        </div>
+      ) : connectionState === "blocked" ? (
+        <div className="border-t border-[var(--border)] bg-[var(--panel)]/80 px-5 py-4 text-center">
+          <p className="text-sm font-semibold">Запрос отклонён</p>
+          <p className="mt-1 text-xs leading-5 text-[var(--muted-2)]">
+            Вы не можете написать снова. Теперь {peer.nickname} сможет отправить вам новый запрос первым.
+          </p>
+        </div>
+      ) : (
+        <form className="border-t border-[var(--border)] p-3" onSubmit={(event) => void send(event)}>
+          {connectionState === "none" ? (
+            <p className="mb-2 px-1 text-xs leading-5 text-[var(--muted-2)]">
+              Можно отправить одно сообщение. Остальные станут доступны после принятия запроса.
+            </p>
+          ) : null}
+          {replyTo ? (
+            <div className="mb-2 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-accent-soft">
+                  Ответ {replyTo.senderId === me.userId ? "себе" : peer.nickname}
+                </p>
+                <p className="truncate text-xs text-[var(--muted-2)]">
+                  <RichText text={replyTo.content} />
+                </p>
+              </div>
+              <button
+                className="shrink-0 text-xs text-[var(--muted-2)]"
+                onClick={() => setReplyTo(null)}
+                type="button"
+              >
+                Снять
+              </button>
+            </div>
+          ) : null}
+          {error ? <p className="mb-2 px-1 text-xs text-red-300">{error}</p> : null}
+          <div className="flex items-end gap-2">
+            <textarea
+              className="max-h-36 min-h-12 flex-1 resize-none rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm"
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder={
+                connectionState === "none"
+                  ? `Первое сообщение для ${peer.nickname}`
+                  : replyTo
+                    ? "Напишите ответ"
+                    : `Сообщение для ${peer.nickname}`
+              }
+              rows={1}
+              value={draft}
+            />
+            <button
+              className="hover-accent rounded-full bg-accent px-4 py-3 text-sm font-semibold text-on-accent disabled:opacity-50"
+              disabled={sending || !draft.trim()}
+              type="submit"
+            >
+              {connectionState === "none" ? "Запрос" : "Отправить"}
+            </button>
+          </div>
+        </form>
+      )}
     </>
   );
 }

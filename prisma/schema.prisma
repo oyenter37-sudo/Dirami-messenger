@@ -8,29 +8,56 @@ datasource db {
 }
 
 model User {
-  id               String    @id @default(cuid())
-  nickname         String    @unique
+  id               String     @id @default(cuid())
+  nickname         String     @unique
   passwordHash     String
-  bio              String    @default("")
-  createdAt        DateTime  @default(now())
-  sentMessages     Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
+  bio              String     @default("")
+  createdAt        DateTime   @default(now())
+  sentMessages     Message[]  @relation("SentMessages")
+  receivedMessages Message[]  @relation("ReceivedMessages")
   reactions        Reaction[]
   nfts             Nft[]
+  chatsAsA         Chat[]     @relation("ChatUserA")
+  chatsAsB         Chat[]     @relation("ChatUserB")
+  initiatedChats   Chat[]     @relation("ChatInitiator")
+}
+
+enum ChatStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Chat {
+  id          String     @id @default(cuid())
+  userAId     String
+  userBId     String
+  initiatorId String
+  status      ChatStatus @default(PENDING)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  userA       User       @relation("ChatUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB       User       @relation("ChatUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  initiator   User       @relation("ChatInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId])
+  @@index([userAId, status, updatedAt])
+  @@index([userBId, status, updatedAt])
+  @@index([initiatorId, status])
 }
 
 model Message {
-  id         String    @id @default(cuid())
+  id         String     @id @default(cuid())
   content    String
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime   @default(now())
   readAt     DateTime?
   senderId   String
   receiverId String
   replyToId  String?
-  sender     User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver   User      @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
-  replyTo    Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies    Message[] @relation("MessageReplies")
+  sender     User       @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User       @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  replyTo    Message?   @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    Message[]  @relation("MessageReplies")
   reactions  Reaction[]
 
   @@index([senderId, receiverId, createdAt])

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api";
+import { chatStateFor } from "@/lib/chat-state";
 import type { ChatPreview } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -11,16 +12,35 @@ export async function GET() {
   if (auth.error) return auth.error;
 
   const me = auth.session.userId;
+  const connections = await prisma.chat.findMany({
+    where: {
+      AND: [
+        { OR: [{ userAId: me }, { userBId: me }] },
+        { status: { in: ["PENDING", "ACCEPTED"] } },
+      ],
+    },
+    include: {
+      userA: { select: { id: true, nickname: true, bio: true } },
+      userB: { select: { id: true, nickname: true, bio: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
 
-  const [users, messages, unreadGroups] = await Promise.all([
-    prisma.user.findMany({
-      where: { id: { not: me } },
-      select: { id: true, nickname: true, bio: true },
-      orderBy: { nickname: "asc" },
-    }),
+  if (connections.length === 0) {
+    return NextResponse.json({ chats: [] });
+  }
+
+  const peers = new Set(
+    connections.map((chat) => (chat.userAId === me ? chat.userBId : chat.userAId)),
+  );
+
+  const [messages, unreadGroups] = await Promise.all([
     prisma.message.findMany({
       where: {
-        OR: [{ senderId: me }, { receiverId: me }],
+        OR: [
+          { senderId: me, receiverId: { in: [...peers] } },
+          { receiverId: me, senderId: { in: [...peers] } },
+        ],
       },
       orderBy: { createdAt: "desc" },
       take: 800,
@@ -34,7 +54,7 @@ export async function GET() {
     }),
     prisma.message.groupBy({
       by: ["senderId"],
-      where: { receiverId: me, readAt: null },
+      where: { receiverId: me, senderId: { in: [...peers] }, readAt: null },
       _count: { _all: true },
     }),
   ]);
@@ -46,20 +66,25 @@ export async function GET() {
 
   for (const message of messages) {
     const peerId = message.senderId === me ? message.receiverId : message.senderId;
-    if (!lastByPeer.has(peerId)) {
-      lastByPeer.set(peerId, message);
-    }
+    if (!lastByPeer.has(peerId)) lastByPeer.set(peerId, message);
   }
 
   const unreadByPeer = new Map(
     unreadGroups.map((row) => [row.senderId, row._count._all]),
   );
 
-  const chats: ChatPreview[] = users
-    .map((user) => {
+  const chats: ChatPreview[] = connections
+    .map((connection) => {
+      const user = connection.userAId === me ? connection.userB : connection.userA;
       const last = lastByPeer.get(user.id) ?? null;
+      const state = chatStateFor(connection, me);
+
+      // The query above guarantees one of these three states.
+      if (state === "none" || state === "blocked") return null;
+
       return {
         user,
+        state,
         lastMessage: last
           ? {
               id: last.id,
@@ -71,6 +96,7 @@ export async function GET() {
         unread: unreadByPeer.get(user.id) ?? 0,
       };
     })
+    .filter((chat): chat is ChatPreview => chat !== null)
     .sort((a, b) => {
       const aTime = a.lastMessage?.createdAt ?? "";
       const bTime = b.lastMessage?.createdAt ?? "";

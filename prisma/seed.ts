@@ -38,6 +38,25 @@ async function main() {
 
   const existing = await prisma.message.count();
   if (existing === 0) {
+    const pairs = [
+      [mara.id, leo.id],
+      [mara.id, nika.id],
+    ].map(([first, second]) =>
+      first < second
+        ? { userAId: first, userBId: second }
+        : { userAId: second, userBId: first },
+    );
+
+    await Promise.all(
+      pairs.map((pair) =>
+        prisma.chat.upsert({
+          where: { userAId_userBId: pair },
+          update: { status: "ACCEPTED" },
+          create: { ...pair, initiatorId: mara.id, status: "ACCEPTED" },
+        }),
+      ),
+    );
+
     await prisma.message.createMany({
       data: [
         {

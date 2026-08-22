@@ -18,8 +18,11 @@ export type PublicUser = {
   nfts?: NftItem[];
 };
 
+export type ChatState = "none" | "pending_out" | "pending_in" | "accepted" | "blocked";
+
 export type ChatPreview = {
   user: PublicUser;
+  state: Extract<ChatState, "pending_out" | "pending_in" | "accepted">;
   lastMessage: {
     id: string;
     content: string;
@@ -27,6 +30,11 @@ export type ChatPreview = {
     senderId: string;
   } | null;
   unread: number;
+};
+
+export type UserSearchResult = {
+  user: PublicUser;
+  state: ChatState;
 };
 
 export type ChatMessage = {

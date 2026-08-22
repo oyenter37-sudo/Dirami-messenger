@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { avatarColor, initials } from "@/lib/avatar";
 import { RichText } from "@/components/rich-text";
 import type { NftItem, PublicUser } from "@/lib/types";
@@ -12,6 +12,19 @@ type Props = {
   onClose: () => void;
 };
 
+type NftGroup = {
+  key: string;
+  name: string;
+  imageUrl: string;
+  minValueRub: number;
+  maxValueRub: number;
+  items: NftItem[];
+};
+
+function nftGroupKey(nft: NftItem) {
+  return JSON.stringify([nft.name, nft.imageUrl]);
+}
+
 export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
   const [user, setUser] = useState<PublicUser | null>(
     fallback
@@ -21,6 +34,7 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
   const [editing, setEditing] = useState(false);
   const [bioDraft, setBioDraft] = useState("");
   const [bioMsg, setBioMsg] = useState("");
+  const [detailsKey, setDetailsKey] = useState<string | null>(null);
   const [transfer, setTransfer] = useState<{
     nft: NftItem;
     to: string;
@@ -54,7 +68,30 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
 
   const nickname = user?.nickname ?? fallback?.nickname ?? "…";
   const bio = user?.bio ?? fallback?.bio ?? "";
-  const nfts = user?.nfts ?? [];
+  const nfts = useMemo(() => user?.nfts ?? [], [user?.nfts]);
+  const nftGroups = useMemo<NftGroup[]>(() => {
+    const grouped = new Map<string, NftGroup>();
+    for (const nft of nfts) {
+      const key = nftGroupKey(nft);
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.items.push(nft);
+        existing.minValueRub = Math.min(existing.minValueRub, nft.valueRub);
+        existing.maxValueRub = Math.max(existing.maxValueRub, nft.valueRub);
+      } else {
+        grouped.set(key, {
+          key,
+          name: nft.name,
+          imageUrl: nft.imageUrl,
+          minValueRub: nft.valueRub,
+          maxValueRub: nft.valueRub,
+          items: [nft],
+        });
+      }
+    }
+    return [...grouped.values()];
+  }, [nfts]);
+  const detailsGroup = nftGroups.find((group) => group.key === detailsKey) ?? null;
   const joined = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString("ru-RU", {
         month: "long",
@@ -99,6 +136,7 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
         return;
       }
       setTransfer(null);
+      setDetailsKey(null);
       await reload();
     } catch {
       setTransferError("Сеть недоступна");
@@ -196,42 +234,132 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                {nfts.map((nft) => (
-                  <article
-                    key={nft.id}
-                    className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--panel)]"
-                  >
-                    <div className="relative aspect-square">
-                      <img
-                        alt={nft.name}
-                        className="h-full w-full object-cover"
-                        src={nft.imageUrl}
-                      />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-3 pt-10 pb-2">
-                        <p className="truncate text-sm font-bold text-white">{nft.name}</p>
-                        <p className="text-[12px] text-amber-200">
-                          ~ {nft.valueRub.toLocaleString("ru-RU")} ₽
-                        </p>
-                      </div>
-                    </div>
-                    {mine ? (
+                {nftGroups.map((group) => {
+                  const nft = group.items[0];
+                  const multiple = group.items.length > 1;
+                  return (
+                    <article
+                      key={group.key}
+                      className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--panel)]"
+                    >
                       <button
-                        className="w-full py-2 text-center text-[12px] font-semibold hover:bg-white/5"
-                        onClick={() => setTransfer({ nft, to: "", step: 1 })}
+                        className="relative block aspect-square w-full text-left"
+                        onClick={() => multiple && setDetailsKey(group.key)}
                         type="button"
                       >
-                        Передать
+                        <img
+                          alt={group.name}
+                          className="h-full w-full object-cover"
+                          src={group.imageUrl}
+                        />
+                        {multiple ? (
+                          <span className="absolute top-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[11px] font-bold text-white backdrop-blur">
+                            ×{group.items.length}
+                          </span>
+                        ) : null}
+                        <span className="absolute inset-x-0 bottom-0 block bg-gradient-to-t from-black/90 via-black/55 to-transparent px-3 pt-10 pb-2">
+                          <span className="block truncate text-sm font-bold text-white">{group.name}</span>
+                          <span className="block text-[12px] text-amber-200">
+                            ~ {group.minValueRub.toLocaleString("ru-RU")}
+                            {group.maxValueRub !== group.minValueRub
+                              ? `–${group.maxValueRub.toLocaleString("ru-RU")}`
+                              : ""}{" "}
+                            ₽
+                          </span>
+                          {multiple ? (
+                            <span className="mt-1 block text-[12px] font-semibold text-white">
+                              Подробнее&nbsp; &gt;
+                            </span>
+                          ) : null}
+                        </span>
                       </button>
-                    ) : null}
-                  </article>
-                ))}
+                      {mine && !multiple ? (
+                        <button
+                          className="w-full py-2 text-center text-[12px] font-semibold hover:bg-white/5"
+                          onClick={() => setTransfer({ nft, to: "", step: 1 })}
+                          type="button"
+                        >
+                          Передать
+                        </button>
+                      ) : null}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
 
+        {detailsGroup ? (
+          <div
+            className="absolute inset-0 z-30 flex items-end bg-black/65 p-3 sm:items-center sm:p-5"
+            onClick={() => setDetailsKey(null)}
+          >
+            <div
+              className="flex max-h-[86vh] w-full flex-col overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--panel)] shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="relative h-44 shrink-0 overflow-hidden">
+                <img
+                  alt={detailsGroup.name}
+                  className="h-full w-full object-cover"
+                  src={detailsGroup.imageUrl}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--panel)] via-black/20 to-black/10" />
+                <button
+                  className="absolute top-3 right-3 grid size-9 place-items-center rounded-full bg-black/60 text-lg text-white"
+                  onClick={() => setDetailsKey(null)}
+                  type="button"
+                >
+                  ×
+                </button>
+                <div className="absolute inset-x-0 bottom-0 px-4 pb-3">
+                  <p className="text-lg font-extrabold text-white">{detailsGroup.name}</p>
+                  <p className="text-xs text-white/75">
+                    Одинаковых NFT: {detailsGroup.items.length}
+                  </p>
+                </div>
+              </div>
+              <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-4">
+                <p className="mb-3 text-xs leading-5 text-[var(--muted-2)]">
+                  Здесь показаны все экземпляры, их цена и идентификатор.
+                </p>
+                <div className="space-y-2">
+                  {detailsGroup.items.map((nft, index) => (
+                    <div
+                      key={nft.id}
+                      className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5"
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-muted text-xs font-bold text-accent-soft">
+                        #{index + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">
+                          {nft.valueRub.toLocaleString("ru-RU")} ₽
+                        </p>
+                        <p className="truncate text-[10px] text-[var(--muted-2)]">
+                          ID: {nft.id}
+                        </p>
+                      </div>
+                      {mine ? (
+                        <button
+                          className="shrink-0 rounded-full border border-[var(--border)] px-3 py-1.5 text-[11px] font-semibold hover:bg-white/5"
+                          onClick={() => setTransfer({ nft, to: "", step: 1 })}
+                          type="button"
+                        >
+                          Передать
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {transfer ? (
-          <div className="absolute inset-0 z-30 flex items-end bg-black/55 p-4 sm:items-center">
+          <div className="absolute inset-0 z-40 flex items-end bg-black/55 p-4 sm:items-center">
             <div className="w-full rounded-3xl border border-[var(--border)] bg-[var(--panel)] p-4">
               <p className="text-sm font-bold">Передача NFT</p>
               <p className="mt-1 text-xs text-[var(--muted-2)]">{transfer.nft.name}</p>
