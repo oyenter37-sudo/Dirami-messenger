@@ -11,7 +11,13 @@ export default async function UserLinkPage({
   params: Promise<{ username: string }>;
 }) {
   const { username: rawUsername } = await params;
-  const username = rawUsername.replace(/^@/, "").trim();
+  let decodedUsername = rawUsername;
+  try {
+    decodedUsername = decodeURIComponent(rawUsername);
+  } catch {
+    notFound();
+  }
+  const username = decodedUsername.replace(/^@/, "").trim();
   if (!username || username.length > 24) notFound();
 
   const publicPath = `/u/u/@${encodeURIComponent(username)}`;
