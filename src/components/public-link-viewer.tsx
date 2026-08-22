@@ -31,7 +31,7 @@ function PublicBackdrop() {
 
 export function PublicProfileViewer({ user }: { user: ProfilePreview }) {
   const router = useRouter();
-  const publicPath = `/u/u/@${encodeURIComponent(user.nickname)}`;
+  const messagePath = `/chat?peer=${encodeURIComponent(user.id)}`;
 
   return (
     <main className="min-h-[100dvh]">
@@ -42,7 +42,7 @@ export function PublicProfileViewer({ user }: { user: ProfilePreview }) {
         meId=""
         onClose={() => router.push("/")}
         onMessage={() =>
-          router.push(`/?next=${encodeURIComponent(publicPath)}`)
+          router.push(`/?next=${encodeURIComponent(messagePath)}`)
         }
         onOpenLinkedProfile={(linkedUser) =>
           router.push(`/u/u/@${encodeURIComponent(linkedUser.nickname)}`)

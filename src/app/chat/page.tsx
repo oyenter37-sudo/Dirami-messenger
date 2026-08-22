@@ -12,6 +12,7 @@ export default async function ChatPage({
   searchParams: Promise<{
     profile?: string | string[];
     nft?: string | string[];
+    peer?: string | string[];
   }>;
 }) {
   const params = await searchParams;
@@ -22,6 +23,10 @@ export default async function ChatPage({
   const initialNftId =
     typeof params.nft === "string" && params.nft.length <= 64
       ? params.nft
+      : null;
+  const initialPeerId =
+    typeof params.peer === "string" && params.peer.length <= 64
+      ? params.peer
       : null;
   const session = await getSession();
   if (!session) {
@@ -44,6 +49,7 @@ export default async function ChatPage({
   return (
     <MessengerApp
       initialNftId={initialNftId}
+      initialPeerId={initialPeerId}
       initialProfileId={initialProfileId}
       me={{
         ...session,

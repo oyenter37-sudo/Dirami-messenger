@@ -33,6 +33,7 @@ type Props = {
   me: SessionUser;
   initialProfileId?: string | null;
   initialNftId?: string | null;
+  initialPeerId?: string | null;
 };
 
 function formatTime(iso: string) {
@@ -85,7 +86,12 @@ type SidebarItem = UserSearchResult & {
   unread: number;
 };
 
-export function MessengerApp({ me, initialProfileId, initialNftId }: Props) {
+export function MessengerApp({
+  me,
+  initialProfileId,
+  initialNftId,
+  initialPeerId,
+}: Props) {
   const router = useRouter();
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [peerId, setPeerId] = useState<string | null>(null);
@@ -174,10 +180,35 @@ export function MessengerApp({ me, initialProfileId, initialNftId }: Props) {
   }, [goHome, me.userId]);
 
   useEffect(() => {
-    if (initialProfileId || initialNftId) {
+    if (!initialPeerId) return;
+    let cancelled = false;
+    void fetch(`/api/users/${encodeURIComponent(initialPeerId)}`, {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const data = (await response.json()) as {
+          user?: UserSearchResult["user"];
+          state?: ChatState;
+        };
+        if (!response.ok || !data.user || cancelled) return;
+        if (data.user.id === me.userId) {
+          setProfileId(data.user.id);
+          return;
+        }
+        setOpenedUser({ user: data.user, state: data.state ?? "none" });
+        setPeerId(data.user.id);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialPeerId, me.userId]);
+
+  useEffect(() => {
+    if (initialProfileId || initialNftId || initialPeerId) {
       window.history.replaceState(window.history.state, "", "/chat");
     }
-  }, [initialNftId, initialProfileId]);
+  }, [initialNftId, initialPeerId, initialProfileId]);
 
   useEffect(() => {
     const unlock = () => void unlockMessageSounds();
