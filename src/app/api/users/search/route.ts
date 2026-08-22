@@ -21,7 +21,14 @@ export async function GET(request: Request) {
       id: { not: me },
       nickname: { contains: query, mode: "insensitive" },
     },
-    select: { id: true, nickname: true, bio: true },
+    select: {
+      id: true,
+      nickname: true,
+      bio: true,
+      avatarUrl: true,
+      profileAccent: true,
+      profileBackground: true,
+    },
     orderBy: { nickname: "asc" },
     take: 20,
   });

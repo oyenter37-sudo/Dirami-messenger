@@ -1,3 +1,5 @@
+import { isProfileBackground } from "@/lib/profile-customization";
+
 const NICKNAME_RE = /^[\p{L}\p{N}_]{3,24}$/u;
 
 export function parseNickname(value: unknown) {
@@ -29,11 +31,29 @@ export function parseMessageContent(value: unknown) {
 
 export function parseHttpUrl(value: unknown) {
   if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (raw.length > 2048) return null;
   try {
-    const url = new URL(value.trim());
+    const url = new URL(raw);
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
     return url.toString();
   } catch {
     return null;
   }
+}
+
+export function parseOptionalHttpUrl(value: unknown) {
+  if (typeof value !== "string") return null;
+  if (!value.trim()) return "";
+  return parseHttpUrl(value);
+}
+
+export function parseProfileAccent(value: unknown) {
+  if (typeof value !== "string" || !/^#[0-9a-f]{6}$/i.test(value)) return null;
+  return value.toLowerCase();
+}
+
+export function parseProfileBackground(value: unknown) {
+  if (typeof value !== "string" || !isProfileBackground(value)) return null;
+  return value;
 }

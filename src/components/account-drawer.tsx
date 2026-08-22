@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { avatarColor, initials } from "@/lib/avatar";
 import { RichText } from "@/components/rich-text";
+import { UserAvatar } from "@/components/user-avatar";
 
 type Props = {
   nickname: string;
@@ -49,6 +49,20 @@ export function AccountDrawer({
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data: { user?: { avatarUrl?: string } }) => {
+        if (!cancelled) setAvatarUrl(data.user?.avatarUrl ?? "");
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -101,9 +115,11 @@ export function AccountDrawer({
 
         <div className="scrollbar-thin flex-1 overflow-y-auto p-4">
           <div className="flex items-center gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-3.5">
-            <span className={`grid size-12 shrink-0 place-items-center rounded-full text-sm font-extrabold text-white ${avatarColor(nickname)}`}>
-              {initials(nickname)}
-            </span>
+            <UserAvatar
+              avatarUrl={avatarUrl}
+              className="size-12 rounded-full text-sm"
+              nickname={nickname}
+            />
             <div className="min-w-0">
               <p className="truncate text-sm font-extrabold"><RichText text={nickname} /></p>
               <p className="truncate text-xs text-[var(--muted-2)]">@{nickname}</p>

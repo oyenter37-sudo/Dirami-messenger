@@ -8,18 +8,21 @@ datasource db {
 }
 
 model User {
-  id               String     @id @default(cuid())
-  nickname         String     @unique
-  passwordHash     String
-  bio              String     @default("")
-  createdAt        DateTime   @default(now())
-  sentMessages     Message[]  @relation("SentMessages")
-  receivedMessages Message[]  @relation("ReceivedMessages")
-  reactions        Reaction[]
-  nfts             Nft[]
-  chatsAsA         Chat[]     @relation("ChatUserA")
-  chatsAsB         Chat[]     @relation("ChatUserB")
-  initiatedChats   Chat[]     @relation("ChatInitiator")
+  id                String     @id @default(cuid())
+  nickname          String     @unique
+  passwordHash      String
+  bio               String     @default("")
+  avatarUrl         String     @default("")
+  profileAccent     String     @default("#4fbfa8")
+  profileBackground String     @default("aurora")
+  createdAt         DateTime   @default(now())
+  sentMessages      Message[]  @relation("SentMessages")
+  receivedMessages  Message[]  @relation("ReceivedMessages")
+  reactions         Reaction[]
+  nfts              Nft[]
+  chatsAsA          Chat[]     @relation("ChatUserA")
+  chatsAsB          Chat[]     @relation("ChatUserB")
+  initiatedChats    Chat[]     @relation("ChatInitiator")
 }
 
 enum ChatStatus {

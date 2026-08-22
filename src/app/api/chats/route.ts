@@ -20,8 +20,26 @@ export async function GET() {
       ],
     },
     include: {
-      userA: { select: { id: true, nickname: true, bio: true } },
-      userB: { select: { id: true, nickname: true, bio: true } },
+      userA: {
+        select: {
+          id: true,
+          nickname: true,
+          bio: true,
+          avatarUrl: true,
+          profileAccent: true,
+          profileBackground: true,
+        },
+      },
+      userB: {
+        select: {
+          id: true,
+          nickname: true,
+          bio: true,
+          avatarUrl: true,
+          profileAccent: true,
+          profileBackground: true,
+        },
+      },
     },
     orderBy: { updatedAt: "desc" },
   });

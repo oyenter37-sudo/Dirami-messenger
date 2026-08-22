@@ -157,6 +157,33 @@ input:focus {
   background-color: var(--accent-hover);
 }
 
+.profile-shell {
+  background:
+    radial-gradient(circle at 85% 12%, color-mix(in srgb, var(--profile-accent) 7%, transparent), transparent 32%),
+    var(--bg);
+}
+
+.profile-accent-bg,
+.profile-accent-button {
+  background-color: var(--profile-accent);
+}
+
+.profile-accent-soft {
+  background-color: color-mix(in srgb, var(--profile-accent) 16%, transparent);
+}
+
+.profile-accent-text {
+  color: color-mix(in srgb, var(--profile-accent) 82%, white);
+}
+
+.profile-cover-grid {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.07) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
+}
+
 .no-select,
 .no-select * {
   -webkit-user-select: none !important;

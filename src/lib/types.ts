@@ -14,6 +14,9 @@ export type PublicUser = {
   id: string;
   nickname: string;
   bio: string;
+  avatarUrl: string;
+  profileAccent: string;
+  profileBackground: string;
   createdAt?: string;
   nfts?: NftItem[];
 };

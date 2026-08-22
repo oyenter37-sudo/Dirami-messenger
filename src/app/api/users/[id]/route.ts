@@ -19,6 +19,9 @@ export async function GET(
       id: true,
       nickname: true,
       bio: true,
+      avatarUrl: true,
+      profileAccent: true,
+      profileBackground: true,
       createdAt: true,
       nfts: {
         orderBy: { createdAt: "desc" },

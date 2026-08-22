@@ -2,8 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { avatarColor, initials } from "@/lib/avatar";
 import { AccountDrawer } from "@/components/account-drawer";
+import { UserAvatar } from "@/components/user-avatar";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SettingsPanel } from "@/components/settings-panel";
 import { AppleEmoji } from "@/components/apple-emoji";
@@ -273,15 +273,16 @@ export function MessengerApp({ me }: Props) {
                     onClick={() => openConversation(item)}
                     type="button"
                   >
-                    <span
-                      className={`grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold text-white ${avatarColor(item.user.nickname)}`}
+                    <UserAvatar
+                      avatarUrl={item.user.avatarUrl}
+                      className="size-10 cursor-pointer rounded-full text-sm"
+                      nickname={item.user.nickname}
                       onClick={(event) => {
                         event.stopPropagation();
                         setProfileId(item.user.id);
                       }}
-                    >
-                      {initials(item.user.nickname)}
-                    </span>
+                      title="Открыть профиль"
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-medium"><RichText text={item.user.nickname} /></span>
@@ -363,7 +364,10 @@ export function MessengerApp({ me }: Props) {
         <ProfileSheet
           userId={profileId}
           meId={me.userId}
-          fallback={chats.find((chat) => chat.user.id === profileId)?.user ?? openedUser?.user}
+          fallback={
+            chats.find((chat) => chat.user.id === profileId)?.user ??
+            (openedUser?.user.id === profileId ? openedUser.user : undefined)
+          }
           onClose={() => setProfileId(null)}
         />
       ) : null}
@@ -382,7 +386,7 @@ function Conversation({
   onOpenProfile,
 }: {
   me: SessionUser;
-  peer: { id: string; nickname: string };
+  peer: { id: string; nickname: string; avatarUrl: string };
   initialState: ChatState;
   onBack: () => void;
   onAuthLost: () => void;
@@ -593,17 +597,17 @@ function Conversation({
           ←
         </button>
         <button
+          aria-label={`Открыть профиль ${peer.nickname}`}
           className="flex min-w-0 items-center gap-3 text-left"
           onClick={onOpenProfile}
+          title="Открыть профиль"
           type="button"
         >
-          <span
-            className={`grid size-10 place-items-center rounded-full text-sm font-semibold text-white ring-2 ring-[var(--accent)]/30 ${avatarColor(
-              peer.nickname,
-            )}`}
-          >
-            {initials(peer.nickname)}
-          </span>
+          <UserAvatar
+            avatarUrl={peer.avatarUrl}
+            className="size-10 rounded-full text-sm ring-2 ring-[var(--accent)]/30"
+            nickname={peer.nickname}
+          />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">
               <RichText text={peer.nickname} />
