@@ -66,6 +66,19 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
     };
   }, [userId]);
 
+  useEffect(() => {
+    if (!detailsKey && !transfer) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (transfer) setTransfer(null);
+      else setDetailsKey(null);
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [detailsKey, transfer]);
+
   const nickname = user?.nickname ?? fallback?.nickname ?? "…";
   const bio = user?.bio ?? fallback?.bio ?? "";
   const nfts = useMemo(() => user?.nfts ?? [], [user?.nfts]);
@@ -233,49 +246,60 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
                 Коллекция пуста
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3.5">
                 {nftGroups.map((group) => {
                   const nft = group.items[0];
                   const multiple = group.items.length > 1;
+                  const price =
+                    group.maxValueRub === group.minValueRub
+                      ? `${group.minValueRub.toLocaleString("ru-RU")} ₽`
+                      : `${group.minValueRub.toLocaleString("ru-RU")}–${group.maxValueRub.toLocaleString("ru-RU")} ₽`;
+
                   return (
                     <article
                       key={group.key}
-                      className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--panel)]"
+                      className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--panel)] p-1.5 shadow-[0_16px_36px_-26px_rgba(0,0,0,0.9)]"
                     >
                       <button
-                        className="relative block aspect-square w-full text-left"
+                        aria-label={multiple ? `Открыть ${group.name}` : group.name}
+                        className={`relative block aspect-square w-full overflow-hidden rounded-[1.1rem] text-left ${
+                          multiple ? "cursor-pointer" : "cursor-default"
+                        }`}
                         onClick={() => multiple && setDetailsKey(group.key)}
                         type="button"
                       >
                         <img
                           alt={group.name}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-cover transition duration-300 hover:scale-[1.025]"
                           src={group.imageUrl}
                         />
+                        <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
                         {multiple ? (
-                          <span className="absolute top-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[11px] font-bold text-white backdrop-blur">
-                            ×{group.items.length}
+                          <span className="absolute top-2 left-2 rounded-full border border-white/15 bg-black/65 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg backdrop-blur-md">
+                            {group.items.length} шт.
                           </span>
                         ) : null}
-                        <span className="absolute inset-x-0 bottom-0 block bg-gradient-to-t from-black/90 via-black/55 to-transparent px-3 pt-10 pb-2">
-                          <span className="block truncate text-sm font-bold text-white">{group.name}</span>
-                          <span className="block text-[12px] text-amber-200">
-                            ~ {group.minValueRub.toLocaleString("ru-RU")}
-                            {group.maxValueRub !== group.minValueRub
-                              ? `–${group.maxValueRub.toLocaleString("ru-RU")}`
-                              : ""}{" "}
-                            ₽
-                          </span>
-                          {multiple ? (
-                            <span className="mt-1 block text-[12px] font-semibold text-white">
-                              Подробнее&nbsp; &gt;
-                            </span>
-                          ) : null}
-                        </span>
                       </button>
-                      {mine && !multiple ? (
+
+                      <div className="px-2 pt-2.5 pb-1.5">
+                        <p className="truncate text-[13px] font-bold leading-5">{group.name}</p>
+                        <p className="mt-0.5 truncate text-[11px] font-medium text-amber-200/90">
+                          ≈ {price}
+                        </p>
+                      </div>
+
+                      {multiple ? (
                         <button
-                          className="w-full py-2 text-center text-[12px] font-semibold hover:bg-white/5"
+                          className="mt-1 flex w-full items-center justify-between rounded-2xl bg-accent-muted px-3 py-2.5 text-[12px] font-bold text-accent-soft transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
+                          onClick={() => setDetailsKey(group.key)}
+                          type="button"
+                        >
+                          <span>Подробнее</span>
+                          <span className="grid size-5 place-items-center rounded-full bg-black/10 text-sm">→</span>
+                        </button>
+                      ) : mine ? (
+                        <button
+                          className="mt-1 w-full rounded-2xl px-3 py-2.5 text-center text-[12px] font-semibold text-[var(--muted)] transition hover:bg-white/5 hover:text-[var(--text)]"
                           onClick={() => setTransfer({ nft, to: "", step: 1 })}
                           type="button"
                         >
@@ -292,77 +316,142 @@ export function ProfileSheet({ userId, meId, fallback, onClose }: Props) {
 
         {detailsGroup ? (
           <div
-            className="absolute inset-0 z-30 flex items-end bg-black/65 p-3 sm:items-center sm:p-5"
+            className="absolute inset-0 z-30 flex items-end bg-black/75 backdrop-blur-sm sm:items-center sm:p-5"
             onClick={() => setDetailsKey(null)}
           >
-            <div
-              className="flex max-h-[86vh] w-full flex-col overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--panel)] shadow-2xl"
+            <section
+              aria-label={`Экземпляры ${detailsGroup.name}`}
+              className="profile-in flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] border border-[var(--border)] bg-[var(--bg)] shadow-[0_30px_90px_rgba(0,0,0,0.65)] sm:max-h-[82vh] sm:rounded-[2rem]"
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="relative h-44 shrink-0 overflow-hidden">
-                <img
-                  alt={detailsGroup.name}
-                  className="h-full w-full object-cover"
-                  src={detailsGroup.imageUrl}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--panel)] via-black/20 to-black/10" />
+              <div className="flex justify-center pt-2.5 sm:hidden">
+                <span className="h-1 w-10 rounded-full bg-white/20" />
+              </div>
+
+              <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3.5 sm:px-5">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--muted-2)] uppercase">
+                    NFT-коллекция
+                  </p>
+                  <h3 className="truncate text-[17px] font-extrabold">Все экземпляры</h3>
+                </div>
                 <button
-                  className="absolute top-3 right-3 grid size-9 place-items-center rounded-full bg-black/60 text-lg text-white"
+                  aria-label="Закрыть список NFT"
+                  className="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 bg-white/10 text-[27px] leading-none text-white shadow-lg transition hover:scale-105 hover:bg-white/15"
                   onClick={() => setDetailsKey(null)}
+                  title="Закрыть"
                   type="button"
                 >
                   ×
                 </button>
-                <div className="absolute inset-x-0 bottom-0 px-4 pb-3">
-                  <p className="text-lg font-extrabold text-white">{detailsGroup.name}</p>
-                  <p className="text-xs text-white/75">
-                    Одинаковых NFT: {detailsGroup.items.length}
-                  </p>
-                </div>
-              </div>
-              <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-4">
-                <p className="mb-3 text-xs leading-5 text-[var(--muted-2)]">
-                  Здесь показаны все экземпляры, их цена и идентификатор.
-                </p>
-                <div className="space-y-2">
-                  {detailsGroup.items.map((nft, index) => (
-                    <div
-                      key={nft.id}
-                      className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5"
-                    >
-                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-muted text-xs font-bold text-accent-soft">
-                        #{index + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold">
-                          {nft.valueRub.toLocaleString("ru-RU")} ₽
-                        </p>
-                        <p className="truncate text-[10px] text-[var(--muted-2)]">
-                          ID: {nft.id}
-                        </p>
+              </header>
+
+              <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
+                <div className="p-4 sm:p-5">
+                  <div className="flex items-center gap-4 rounded-[1.6rem] border border-[var(--border)] bg-[var(--panel)] p-3">
+                    <img
+                      alt={detailsGroup.name}
+                      className="size-24 shrink-0 rounded-[1.25rem] object-cover shadow-[0_14px_34px_-16px_rgba(0,0,0,0.9)]"
+                      src={detailsGroup.imageUrl}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[17px] font-extrabold">{detailsGroup.name}</p>
+                      <p className="mt-1 text-xs text-[var(--muted-2)]">
+                        Одинаковые NFT собраны в одном месте
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className="rounded-full bg-accent-muted px-2.5 py-1 text-[11px] font-bold text-accent-soft">
+                          {detailsGroup.items.length} шт.
+                        </span>
+                        <span className="rounded-full bg-amber-300/10 px-2.5 py-1 text-[11px] font-bold text-amber-200">
+                          от {detailsGroup.minValueRub.toLocaleString("ru-RU")} ₽
+                        </span>
                       </div>
-                      {mine ? (
-                        <button
-                          className="shrink-0 rounded-full border border-[var(--border)] px-3 py-1.5 text-[11px] font-semibold hover:bg-white/5"
-                          onClick={() => setTransfer({ nft, to: "", step: 1 })}
-                          type="button"
-                        >
-                          Передать
-                        </button>
-                      ) : null}
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2.5">
+                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-3.5 py-3">
+                      <p className="text-[10px] font-semibold text-[var(--muted-2)] uppercase">Количество</p>
+                      <p className="mt-1 text-lg font-extrabold">{detailsGroup.items.length}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-3.5 py-3">
+                      <p className="text-[10px] font-semibold text-[var(--muted-2)] uppercase">Общая оценка</p>
+                      <p className="mt-1 truncate text-lg font-extrabold">
+                        {detailsGroup.items
+                          .reduce((sum, nft) => sum + nft.valueRub, 0)
+                          .toLocaleString("ru-RU")} ₽
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-between">
+                    <h4 className="text-sm font-extrabold">Экземпляры</h4>
+                    <span className="text-[11px] text-[var(--muted-2)]">
+                      {detailsGroup.items.length} всего
+                    </span>
+                  </div>
+
+                  <div className="mt-2.5 space-y-2">
+                    {detailsGroup.items.map((nft, index) => (
+                      <article
+                        key={nft.id}
+                        className="flex items-center gap-3 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-3 transition hover:border-white/15"
+                      >
+                        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent-muted text-[12px] font-extrabold text-accent-soft">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-extrabold">
+                            {nft.valueRub.toLocaleString("ru-RU")} ₽
+                          </p>
+                          <p className="mt-0.5 truncate font-mono text-[10px] text-[var(--muted-2)]">
+                            ID · {nft.id.slice(-10)}
+                          </p>
+                        </div>
+                        {mine ? (
+                          <button
+                            className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2 text-[11px] font-bold transition hover:border-[var(--accent)] hover:text-accent-soft"
+                            onClick={() => setTransfer({ nft, to: "", step: 1 })}
+                            type="button"
+                          >
+                            Передать
+                          </button>
+                        ) : (
+                          <span className="pr-1 text-[10px] text-[var(--muted-2)]">#{index + 1}</span>
+                        )}
+                      </article>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
           </div>
         ) : null}
 
         {transfer ? (
-          <div className="absolute inset-0 z-40 flex items-end bg-black/55 p-4 sm:items-center">
-            <div className="w-full rounded-3xl border border-[var(--border)] bg-[var(--panel)] p-4">
-              <p className="text-sm font-bold">Передача NFT</p>
-              <p className="mt-1 text-xs text-[var(--muted-2)]">{transfer.nft.name}</p>
+          <div
+            className="absolute inset-0 z-40 flex items-end bg-black/75 p-3 backdrop-blur-sm sm:items-center sm:p-5"
+            onClick={() => setTransfer(null)}
+          >
+            <div
+              className="relative w-full rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)] p-4 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold">Передача NFT</p>
+                  <p className="mt-1 text-xs text-[var(--muted-2)]">{transfer.nft.name}</p>
+                </div>
+                <button
+                  aria-label="Закрыть передачу NFT"
+                  className="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 bg-white/10 text-xl text-white hover:bg-white/15"
+                  onClick={() => setTransfer(null)}
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
               {transfer.step === 1 ? (
                 <>
                   <input
