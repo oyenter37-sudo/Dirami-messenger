@@ -123,7 +123,7 @@ export const USER_LIMIT_DEFINITIONS: Array<{
   },
   {
     key: "nftMintsPerHour",
-    label: "Выпуск NFT",
+    label: "Выпуск NFT · только администратор",
     shortLabel: "Выпусков NFT в час",
     period: "час",
     userVisible: false,

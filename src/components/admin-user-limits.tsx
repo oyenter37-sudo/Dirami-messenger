@@ -246,7 +246,9 @@ export function AdminUserLimits() {
             Все доступные лимиты
           </p>
           <div className="space-y-2">
-            {USER_LIMIT_DEFINITIONS.map((item) => (
+            {USER_LIMIT_DEFINITIONS.filter(
+              (item) => item.key !== "nftMintsPerHour" || selected.isAdmin,
+            ).map((item) => (
               <label
                 className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5"
                 key={item.key}
