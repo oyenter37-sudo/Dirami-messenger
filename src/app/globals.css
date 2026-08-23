@@ -460,7 +460,7 @@ input:focus {
 
 .verified-badges {
   position: relative;
-  z-index: 40;
+  z-index: 1;
   display: inline-flex;
   min-width: max-content;
   flex: 0 0 auto;
@@ -472,7 +472,7 @@ input:focus {
 
 .verification-icon {
   position: relative;
-  z-index: 41;
+  z-index: 2;
   width: 1em;
   height: 1em;
   flex: 0 0 auto;
@@ -481,7 +481,7 @@ input:focus {
 
 .hyper-verified-badge {
   position: relative;
-  z-index: 42;
+  z-index: 2;
   isolation: isolate;
   display: inline-flex;
   width: 1.12em;
