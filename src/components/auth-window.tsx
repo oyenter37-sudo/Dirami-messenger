@@ -4,7 +4,6 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 
-type Mode = "login" | "register";
 type GoogleStep = "choice" | "register" | "link" | null;
 
 type GoogleProfile = {
@@ -31,7 +30,6 @@ async function readJson(response: Response) {
 
 export function AuthWindow({ nextPath = "/chat" }: Props) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("login");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [googleStep, setGoogleStep] = useState<GoogleStep>(null);
@@ -56,15 +54,12 @@ export function AuthWindow({ nextPath = "/chat" }: Props) {
     setPending(true);
 
     try {
-      const response = await fetch(
-        mode === "login" ? "/api/auth/login" : "/api/auth/register",
-        {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ nickname, password }),
-        },
-      );
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ nickname, password }),
+      });
       const data = await readJson(response);
       if (!data) {
         setError(
@@ -349,35 +344,14 @@ export function AuthWindow({ nextPath = "/chat" }: Props) {
             </div>
           ) : (
             <>
-              <div className="mb-6 grid grid-cols-2 rounded-2xl bg-[var(--bg)] p-1">
-                <button
-                  className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
-                    mode === "login"
-                      ? "bg-zinc-800 text-white shadow"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                  onClick={() => {
-                    setMode("login");
-                    setError("");
-                  }}
-                  type="button"
-                >
-                  Вход
-                </button>
-                <button
-                  className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
-                    mode === "register"
-                      ? "bg-zinc-800 text-white shadow"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                  onClick={() => {
-                    setMode("register");
-                    setError("");
-                  }}
-                  type="button"
-                >
-                  Регистрация
-                </button>
+              <div className="mb-5 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3">
+                <p className="text-sm font-semibold">
+                  Вход в существующий аккаунт
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[var(--muted-2)]">
+                  Старые аккаунты входят по юзу и паролю. Новая регистрация
+                  доступна только через Google.
+                </p>
               </div>
 
               <form className="space-y-4" onSubmit={onSubmit}>
@@ -402,17 +376,13 @@ export function AuthWindow({ nextPath = "/chat" }: Props) {
                     Пароль
                   </span>
                   <input
-                    autoComplete={
-                      mode === "login" ? "current-password" : "new-password"
-                    }
+                    autoComplete="current-password"
                     className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-base placeholder:text-[var(--muted-2)] focus:border-[var(--accent)]"
                     maxLength={72}
-                    minLength={mode === "login" ? 6 : 8}
+                    minLength={6}
                     name="password"
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder={
-                      mode === "login" ? "ваш пароль" : "минимум 8 символов"
-                    }
+                    placeholder="ваш пароль"
                     type="password"
                     value={password}
                   />
@@ -425,11 +395,7 @@ export function AuthWindow({ nextPath = "/chat" }: Props) {
                   disabled={pending}
                   type="submit"
                 >
-                  {pending
-                    ? "Секунду…"
-                    : mode === "login"
-                      ? "Войти"
-                      : "Создать аккаунт"}
+                  {pending ? "Секунду…" : "Войти"}
                 </button>
               </form>
 
