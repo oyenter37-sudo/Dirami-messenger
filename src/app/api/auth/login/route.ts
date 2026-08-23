@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       password,
       user?.passwordHash ?? DUMMY_PASSWORD_HASH,
     );
-    if (!user || !passwordValid) {
+    if (!user || !user.passwordHash || !passwordValid) {
       return jsonError("Неверный ник или пароль", 401);
     }
 

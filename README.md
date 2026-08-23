@@ -7,6 +7,7 @@
 - Next.js 16 / React 19 / Tailwind CSS 4
 - Prisma 7 + PostgreSQL (`@prisma/adapter-pg`)
 - JWT-сессия в httpOnly cookie (`jose` + `bcryptjs`)
+- Google Identity Services с серверной проверкой Google ID token
 
 ## Как устроено
 
@@ -29,9 +30,20 @@
 DATABASE_URL="postgresql://USER:PASSWORD@HOST-pooler.REGION.aws.neon.tech/neondb?sslmode=require"
 DIRECT_URL="postgresql://USER:PASSWORD@HOST.REGION.aws.neon.tech/neondb?sslmode=require"
 AUTH_SECRET="длинная-случайная-строка"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="dirami-b0890"
+NEXT_PUBLIC_GOOGLE_CLIENT_ID="149459044632-kt4iphs83n5hnfr9e49k324rpe694qi9.apps.googleusercontent.com"
 ```
 
 `AUTH_SECRET` можно сгенерировать так: `openssl rand -base64 32`.
+
+### Вход через Google
+
+В OAuth Web Client в Google Cloud/Firebase добавь адрес приложения в **Authorized JavaScript origins**:
+
+- production: `https://dirami.vercel.app`
+- локально: `http://localhost:3000`
+
+Client ID публичный и используется браузером. Client secret для этого потока не нужен: сервер проверяет подпись, `aud`, `iss` и срок действия Google ID token. Новый пользователь после Google выбирает собственный юз Dirami. Существующий пользователь связывает Google со своим текущим профилем через ник + пароль или из настроек уже открытой сессии, поэтому чаты, NFT и весь прогресс остаются на прежнем внутреннем `userId`.
 
 Для Neon в `DATABASE_URL` должен быть pooled-хост (`-pooler`) и база **neondb**.
 Миграции сами уберут `-pooler`, но имя базы не меняют. `DIRECT_URL` не обязателен.

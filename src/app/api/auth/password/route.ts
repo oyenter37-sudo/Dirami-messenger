@@ -46,19 +46,26 @@ export async function POST(request: Request) {
   const currentPassword = parsePassword(payload.currentPassword);
   const newPassword = parseNewPassword(payload.newPassword);
 
-  if (!currentPassword || !newPassword) {
+  if (!newPassword) {
     return jsonError("Новый пароль: минимум 8 символов", 400);
-  }
-  if (currentPassword === newPassword) {
-    return jsonError("Новый пароль совпадает со старым", 400);
   }
 
   const user = await prisma.user.findUnique({
     where: { id: auth.session.userId },
     select: { id: true, nickname: true, passwordHash: true },
   });
-  if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) {
-    return jsonError("Текущий пароль неверный", 401);
+  if (!user) return jsonError("Нужно войти", 401);
+
+  if (user.passwordHash) {
+    if (
+      !currentPassword ||
+      !(await verifyPassword(currentPassword, user.passwordHash))
+    ) {
+      return jsonError("Текущий пароль неверный", 401);
+    }
+    if (currentPassword === newPassword) {
+      return jsonError("Новый пароль совпадает со старым", 400);
+    }
   }
 
   const updated = await prisma.user.update({

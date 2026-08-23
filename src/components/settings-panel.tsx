@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AdminNewsPublisher } from "@/components/admin-news-publisher";
 import { AdminNftManager } from "@/components/admin-nft-manager";
 import { AdminUserLimits } from "@/components/admin-user-limits";
+import { GoogleAccountSettings } from "@/components/google-account-settings";
 import { VerifiedName } from "@/components/verified-name";
 import { applyTheme, readTheme, THEMES, type ThemeId } from "@/lib/theme";
 
@@ -164,8 +165,14 @@ export function SettingsPanel({
             </div>
           </section>
 
+          <GoogleAccountSettings />
+
           <section className="rounded-3xl border border-[var(--border)] bg-[var(--panel)] p-4">
-            <p className="mb-3 text-[13px] font-semibold">Пароль</p>
+            <p className="mb-1 text-[13px] font-semibold">Пароль</p>
+            <p className="mb-3 text-[11px] leading-4 text-[var(--muted-2)]">
+              Если аккаунт создан через Google и пароля ещё нет, оставьте поле
+              текущего пароля пустым.
+            </p>
             <div className="space-y-2">
               <input
                 autoComplete="current-password"
