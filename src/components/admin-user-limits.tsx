@@ -117,6 +117,15 @@ export function AdminUserLimits() {
       setIsVerified(data.user.isVerified);
       setIsHyperVerified(data.user.isHyperVerified);
       setLimits({ ...data.user.limits });
+      window.dispatchEvent(
+        new CustomEvent("dirami-verification-changed", {
+          detail: {
+            userId: data.user.id,
+            isVerified: data.user.isVerified,
+            isHyperVerified: data.user.isHyperVerified,
+          },
+        }),
+      );
       setMessage("Пользователь, статусы и лимиты обновлены");
     } catch {
       setMessage("Сеть недоступна");

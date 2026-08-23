@@ -105,6 +105,12 @@ type SidebarItem = UserSearchResult & {
   unread: number;
 };
 
+type VerificationChangedDetail = {
+  userId: string;
+  isVerified: boolean;
+  isHyperVerified: boolean;
+};
+
 export function MessengerApp({
   me,
   initialProfileId,
@@ -124,6 +130,10 @@ export function MessengerApp({
   const [newsUnread, setNewsUnread] = useState(0);
   const [limitsOpen, setLimitsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [myIsVerified, setMyIsVerified] = useState(Boolean(me.isVerified));
+  const [myIsHyperVerified, setMyIsHyperVerified] = useState(
+    Boolean(me.isHyperVerified),
+  );
   const [profileId, setProfileId] = useState<string | null>(
     initialProfileId ?? null,
   );
@@ -134,6 +144,14 @@ export function MessengerApp({
   const selectedChat = chats.find((chat) => chat.user.id === peerId) ?? null;
   const selected =
     selectedChat ?? (openedUser?.user.id === peerId ? openedUser : null);
+  const currentMe = useMemo<SessionUser>(
+    () => ({
+      ...me,
+      isVerified: myIsVerified,
+      isHyperVerified: myIsHyperVerified,
+    }),
+    [me, myIsHyperVerified, myIsVerified],
+  );
 
   const sidebarItems = useMemo<SidebarItem[]>(() => {
     if (!query.trim()) {
@@ -229,6 +247,22 @@ export function MessengerApp({
       window.history.replaceState(window.history.state, "", "/chat");
     }
   }, [initialNewsOpen, initialNftId, initialPeerId, initialProfileId]);
+
+  useEffect(() => {
+    const updateVerification = (event: Event) => {
+      const detail = (event as CustomEvent<VerificationChangedDetail>).detail;
+      if (!detail || detail.userId !== me.userId) return;
+      setMyIsVerified(detail.isVerified);
+      setMyIsHyperVerified(detail.isHyperVerified);
+    };
+
+    window.addEventListener("dirami-verification-changed", updateVerification);
+    return () =>
+      window.removeEventListener(
+        "dirami-verification-changed",
+        updateVerification,
+      );
+  }, [me.userId]);
 
   useEffect(() => {
     const unlock = () => void unlockMessageSounds();
@@ -510,7 +544,7 @@ export function MessengerApp({
         ) : (
           <Conversation
             key={selected.user.id}
-            me={me}
+            me={currentMe}
             peer={selected.user}
             initialState={selected.state}
             onBack={() => setPeerId(null)}
@@ -525,8 +559,8 @@ export function MessengerApp({
       {accountOpen ? (
         <AccountDrawer
           displayName={me.displayName}
-          isHyperVerified={me.isHyperVerified}
-          isVerified={me.isVerified}
+          isHyperVerified={myIsHyperVerified}
+          isVerified={myIsVerified}
           newsUnread={newsUnread}
           nickname={me.nickname}
           onClose={() => setAccountOpen(false)}
@@ -567,8 +601,8 @@ export function MessengerApp({
       {settingsOpen ? (
         <SettingsPanel
           isAdmin={Boolean(me.isAdmin)}
-          isHyperVerified={Boolean(me.isHyperVerified)}
-          isVerified={Boolean(me.isVerified)}
+          isHyperVerified={myIsHyperVerified}
+          isVerified={myIsVerified}
           nickname={me.nickname}
           onClose={() => setSettingsOpen(false)}
         />
@@ -652,9 +686,7 @@ function Conversation({
   const pressStart = useRef({ x: 0, y: 0 });
   const [enterIds, setEnterIds] = useState<string[]>([]);
   const peerName = peer.displayName || peer.nickname;
-  const availableReactions = me.isHyperVerified
-    ? [...REACTIONS, ...HYPER_REACTIONS]
-    : REACTIONS;
+  const canUseHyperReactions = Boolean(me.isHyperVerified);
 
   function clearPress() {
     if (pressTimer.current) {
@@ -666,7 +698,7 @@ function Conversation({
   function openMenu(id: string, x: number, y: number, mine: boolean) {
     window.getSelection()?.removeAllRanges();
     const width = 228;
-    const height = me.isHyperVerified ? 310 : 278;
+    const height = canUseHyperReactions ? 334 : 278;
     let left = mine ? x - width + 12 : x - 12;
     let top = y - 64;
     left = Math.min(Math.max(10, left), window.innerWidth - width - 10);
@@ -682,8 +714,19 @@ function Conversation({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ messageId, emoji }),
       });
-      const data = (await response.json()) as { message?: ChatMessage };
-      if (!response.ok || !data.message) return;
+      const data = (await response.json()) as {
+        message?: ChatMessage;
+        error?: string;
+      };
+      if (response.status === 401) {
+        onAuthLost();
+        return;
+      }
+      if (!response.ok || !data.message) {
+        setError(data.error ?? "Не удалось поставить реакцию");
+        return;
+      }
+      setError("");
       setMessages((current) =>
         current.map((item) =>
           item.id === data.message!.id ? data.message! : item,
@@ -1134,32 +1177,55 @@ function Conversation({
 
       {menu ? (
         <div
-          className="menu-overlay fixed inset-0 z-40"
+          className="menu-overlay no-select fixed inset-0 z-40"
           onClick={() => setMenu(null)}
+          onContextMenu={(event) => event.preventDefault()}
         >
           <div
-            className="glass-menu menu-pop absolute overflow-hidden rounded-2xl py-1"
+            className="glass-menu menu-pop no-select absolute touch-manipulation overflow-hidden rounded-2xl py-1"
             onClick={(event) => event.stopPropagation()}
+            onContextMenu={(event) => event.preventDefault()}
+            onDragStart={(event) => event.preventDefault()}
             style={{ left: menu.x, top: menu.y }}
           >
             <div className="grid grid-cols-7 gap-0.5 px-1.5 pt-1.5 pb-1">
-              {availableReactions.map((emoji) => {
-                const hyper = (HYPER_REACTIONS as readonly string[]).includes(
-                  emoji,
-                );
-                return (
-                  <button
-                    key={emoji}
-                    className={`grid size-7 place-items-center rounded-full text-[15px] hover:bg-white/10 ${hyper ? "bg-fuchsia-400/8 shadow-[inset_0_0_10px_rgba(217,70,239,.12)]" : ""}`}
-                    onClick={() => void react(menu.id, emoji)}
-                    title={hyper ? "Гиперреакция" : "Реакция"}
-                    type="button"
-                  >
-                    <AppleEmoji emoji={emoji} />
-                  </button>
-                );
-              })}
+              {REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  className="grid size-7 place-items-center rounded-full text-[15px] hover:bg-white/10"
+                  onClick={() => void react(menu.id, emoji)}
+                  title="Реакция"
+                  type="button"
+                >
+                  <AppleEmoji emoji={emoji} />
+                </button>
+              ))}
             </div>
+            {canUseHyperReactions ? (
+              <div className="border-t border-fuchsia-300/12 bg-[linear-gradient(110deg,rgba(244,114,182,.06),rgba(56,189,248,.05),rgba(250,204,21,.05))] px-1.5 pt-1 pb-1.5">
+                <div className="flex items-center justify-between px-1 pb-0.5">
+                  <span className="text-[8px] font-black tracking-[0.12em] text-fuchsia-200/75 uppercase">
+                    Гиперреакции
+                  </span>
+                  <span className="hyper-verified-badge text-[9px]">
+                    <span aria-hidden="true">✓</span>
+                  </span>
+                </div>
+                <div className="grid grid-cols-7 gap-0.5">
+                  {HYPER_REACTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      className="grid size-7 place-items-center rounded-full bg-fuchsia-400/8 text-[15px] shadow-[inset_0_0_10px_rgba(217,70,239,.12)] hover:bg-fuchsia-300/15"
+                      onClick={() => void react(menu.id, emoji)}
+                      title="Гиперреакция"
+                      type="button"
+                    >
+                      <AppleEmoji emoji={emoji} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="mx-2 h-px bg-white/10" />
             <button
               className="block w-full px-3.5 py-2 text-left text-[13px] hover:bg-white/10"

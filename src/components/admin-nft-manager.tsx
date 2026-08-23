@@ -408,10 +408,11 @@ export function AdminNftManager() {
                         >
                           <span className="min-w-0">
                             <VerifiedName
-                              className="block truncate text-sm font-bold"
+                              className="text-sm font-bold"
                               isHyperVerified={user.isHyperVerified}
                               isVerified={user.isVerified}
                               name={ownerLabel(user)}
+                              truncate
                             />
                             <span className="block truncate text-[10px] text-[var(--muted-2)]">
                               @{user.nickname}
