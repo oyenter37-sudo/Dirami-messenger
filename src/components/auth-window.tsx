@@ -1,10 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
-
-type GoogleStep = "choice" | "register" | "link" | null;
 
 type GoogleProfile = {
   email: string;
@@ -30,55 +28,18 @@ async function readJson(response: Response) {
 
 export function AuthWindow({ nextPath = "/chat" }: Props) {
   const router = useRouter();
-  const [nickname, setNickname] = useState("");
-  const [password, setPassword] = useState("");
-  const [googleStep, setGoogleStep] = useState<GoogleStep>(null);
   const [googleCredential, setGoogleCredential] = useState("");
   const [googleProfile, setGoogleProfile] = useState<GoogleProfile | null>(
     null,
   );
-  const [googleNickname, setGoogleNickname] = useState("");
-  const [existingNickname, setExistingNickname] = useState("");
-  const [existingPassword, setExistingPassword] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [choosingNickname, setChoosingNickname] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
   function enterMessenger() {
     router.replace(nextPath);
     router.refresh();
-  }
-
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
-    setError("");
-    setPending(true);
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ nickname, password }),
-      });
-      const data = await readJson(response);
-      if (!data) {
-        setError(
-          response.ok
-            ? "Сеть недоступна"
-            : `Ошибка сервера (${response.status})`,
-        );
-        return;
-      }
-      if (!response.ok) {
-        setError(data.error ?? "Не получилось войти");
-        return;
-      }
-      enterMessenger();
-    } catch {
-      setError("Сеть недоступна");
-    } finally {
-      setPending(false);
-    }
   }
 
   async function receiveGoogleCredential(credential: string) {
@@ -99,7 +60,7 @@ export function AuthWindow({ nextPath = "/chat" }: Props) {
       if (data?.code === "GOOGLE_NOT_LINKED" && data.googleProfile) {
         setGoogleCredential(credential);
         setGoogleProfile(data.googleProfile);
-        setGoogleStep("choice");
+        setChoosingNickname(true);
         return;
       }
       setError(data?.error ?? "Не получилось войти через Google");
@@ -110,9 +71,9 @@ export function AuthWindow({ nextPath = "/chat" }: Props) {
     }
   }
 
-  async function completeGoogleSetup(action: "register" | "link") {
+  async function createGoogleAccount() {
     if (!googleCredential) {
-      setGoogleStep(null);
+      resetGoogleSetup();
       setError("Нажмите «Продолжить с Google» ещё раз");
       return;
     }
@@ -125,19 +86,15 @@ export function AuthWindow({ nextPath = "/chat" }: Props) {
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          action,
+          action: "register",
           credential: googleCredential,
-          nickname: action === "register" ? googleNickname : existingNickname,
-          password: action === "link" ? existingPassword : undefined,
+          nickname,
         }),
       });
       const data = await readJson(response);
       if (!response.ok) {
-        if (data?.code === "GOOGLE_CREDENTIAL_INVALID") {
-          setGoogleStep(null);
-          setGoogleCredential("");
-        }
-        setError(data?.error ?? "Не удалось подключить Google");
+        if (data?.code === "GOOGLE_CREDENTIAL_INVALID") resetGoogleSetup();
+        setError(data?.error ?? "Не удалось создать профиль Dirami");
         return;
       }
       enterMessenger();
@@ -148,13 +105,11 @@ export function AuthWindow({ nextPath = "/chat" }: Props) {
     }
   }
 
-  function closeGoogleSetup() {
-    setGoogleStep(null);
+  function resetGoogleSetup() {
+    setChoosingNickname(false);
     setGoogleCredential("");
     setGoogleProfile(null);
-    setGoogleNickname("");
-    setExistingNickname("");
-    setExistingPassword("");
+    setNickname("");
     setError("");
   }
 
@@ -169,252 +124,128 @@ export function AuthWindow({ nextPath = "/chat" }: Props) {
           <span className="size-2.5 rounded-full bg-amber-400/90" />
           <span className="size-2.5 rounded-full bg-emerald-400/90" />
           <p className="ml-2 text-xs tracking-wide text-zinc-500">
-            dirami://auth
+            dirami://google-auth
           </p>
         </header>
 
         <div className="px-6 py-8 sm:px-8">
-          <div className="mb-6 flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-2xl bg-accent text-lg font-semibold text-on-accent">
+          <div className="mb-7 flex items-center gap-3">
+            <span className="grid size-11 place-items-center rounded-2xl bg-accent text-lg font-black text-on-accent shadow-[0_16px_38px_-20px_var(--accent)]">
               D
             </span>
             <div>
               <p className="text-sm font-medium text-accent-soft">Dirami</p>
               <h1 className="text-2xl font-semibold tracking-tight">
-                Мессенджер
+                {choosingNickname ? "Ваш новый юз" : "Добро пожаловать"}
               </h1>
             </div>
           </div>
 
-          {googleStep ? (
-            <div>
-              <button
-                className="mb-4 text-sm text-[var(--muted-2)] hover:text-[var(--text)]"
-                disabled={pending}
-                onClick={closeGoogleSetup}
-                type="button"
-              >
-                ← Другой способ входа
-              </button>
-
-              <div className="mb-5 rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-3">
-                <p className="text-sm font-semibold">
-                  {googleProfile?.name || "Google-аккаунт"}
-                </p>
-                <p className="mt-0.5 truncate text-xs text-[var(--muted-2)]">
-                  {googleProfile?.email}
-                </p>
-              </div>
-
-              {googleStep === "choice" ? (
-                <div className="space-y-3">
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      Как подключить Google?
-                    </h2>
-                    <p className="mt-1 text-sm leading-5 text-[var(--muted-2)]">
-                      Мы не связываем аккаунты автоматически по email — так
-                      чужой человек не сможет забрать ваш профиль.
-                    </p>
-                  </div>
-                  <button
-                    className="hover-accent w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent"
-                    onClick={() => setGoogleStep("register")}
-                    type="button"
-                  >
-                    Я новый — выбрать юз
-                  </button>
-                  <button
-                    className="w-full rounded-2xl border border-[var(--border)] px-4 py-3 text-sm font-semibold hover:bg-white/5"
-                    onClick={() => setGoogleStep("link")}
-                    type="button"
-                  >
-                    У меня уже есть Dirami
-                  </button>
-                  <p className="text-center text-[11px] leading-4 text-[var(--muted-2)]">
-                    Во втором варианте сохранятся чаты, профиль, NFT, галочка и
-                    весь остальной прогресс.
-                  </p>
-                </div>
-              ) : googleStep === "register" ? (
-                <form
-                  className="space-y-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void completeGoogleSetup("register");
-                  }}
-                >
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      Выберите юз Dirami
-                    </h2>
-                    <p className="mt-1 text-sm text-[var(--muted-2)]">
-                      Google email не станет вашим публичным ником.
-                    </p>
-                  </div>
-                  <input
-                    autoComplete="username"
-                    autoFocus
-                    className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-base placeholder:text-[var(--muted-2)] focus:border-[var(--accent)]"
-                    maxLength={24}
-                    onChange={(event) => setGoogleNickname(event.target.value)}
-                    placeholder="например, mara"
-                    value={googleNickname}
-                  />
-                  {error ? <AuthError text={error} /> : null}
-                  <button
-                    className="hover-accent w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent disabled:opacity-60"
-                    disabled={pending || !googleNickname.trim()}
-                    type="submit"
-                  >
-                    {pending ? "Создаём…" : "Создать с Google"}
-                  </button>
-                  <button
-                    className="w-full text-sm text-[var(--muted-2)]"
-                    onClick={() => {
-                      setGoogleStep("choice");
-                      setError("");
-                    }}
-                    type="button"
-                  >
-                    Назад
-                  </button>
-                </form>
-              ) : (
-                <form
-                  className="space-y-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void completeGoogleSetup("link");
-                  }}
-                >
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      Перенос существующего профиля
-                    </h2>
-                    <p className="mt-1 text-sm leading-5 text-[var(--muted-2)]">
-                      Один раз подтвердите старый ник и пароль. Мы привяжем
-                      Google к тому же внутреннему профилю — ничего не пропадёт.
-                    </p>
-                  </div>
-                  <input
-                    autoComplete="username"
-                    autoFocus
-                    className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-base placeholder:text-[var(--muted-2)] focus:border-[var(--accent)]"
-                    maxLength={24}
-                    onChange={(event) =>
-                      setExistingNickname(event.target.value)
-                    }
-                    placeholder="Ваш юз Dirami"
-                    value={existingNickname}
-                  />
-                  <input
-                    autoComplete="current-password"
-                    className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-base placeholder:text-[var(--muted-2)] focus:border-[var(--accent)]"
-                    maxLength={72}
-                    onChange={(event) =>
-                      setExistingPassword(event.target.value)
-                    }
-                    placeholder="Текущий пароль"
-                    type="password"
-                    value={existingPassword}
-                  />
-                  {error ? <AuthError text={error} /> : null}
-                  <button
-                    className="hover-accent w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent disabled:opacity-60"
-                    disabled={
-                      pending || !existingNickname.trim() || !existingPassword
-                    }
-                    type="submit"
-                  >
-                    {pending ? "Переносим…" : "Сохранить прогресс и подключить"}
-                  </button>
-                  <button
-                    className="w-full text-sm text-[var(--muted-2)]"
-                    onClick={() => {
-                      setGoogleStep("choice");
-                      setError("");
-                    }}
-                    type="button"
-                  >
-                    Назад
-                  </button>
-                </form>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="mb-5 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3">
-                <p className="text-sm font-semibold">
-                  Вход в существующий аккаунт
-                </p>
-                <p className="mt-1 text-xs leading-5 text-[var(--muted-2)]">
-                  Старые аккаунты входят по юзу и паролю. Новая регистрация
-                  доступна только через Google.
-                </p>
-              </div>
-
-              <form className="space-y-4" onSubmit={onSubmit}>
-                <label className="block">
-                  <span className="mb-1.5 block text-sm text-zinc-400">
-                    Ник
+          {choosingNickname ? (
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void createGoogleAccount();
+              }}
+            >
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-3.5">
+                <div className="flex items-center gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-lg font-black text-[#4285f4]">
+                    G
                   </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">
+                      {googleProfile?.name || "Google-аккаунт"}
+                    </span>
+                    <span className="block truncate text-xs text-[var(--muted-2)]">
+                      {googleProfile?.email}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold">Выберите юз Dirami</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--muted-2)]">
+                  Он будет виден в профиле и ссылке. Google email останется
+                  скрытым.
+                </p>
+              </div>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-[var(--muted-2)]">
+                  Юз
+                </span>
+                <div className="flex items-center rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 focus-within:border-[var(--accent)]">
+                  <span className="text-[var(--muted-2)]">@</span>
                   <input
                     autoComplete="username"
                     autoFocus
-                    className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-base placeholder:text-[var(--muted-2)] focus:border-[var(--accent)]"
+                    className="min-w-0 flex-1 bg-transparent px-1 py-3 text-base outline-none placeholder:text-[var(--muted-2)]"
                     maxLength={24}
-                    name="nickname"
                     onChange={(event) => setNickname(event.target.value)}
                     placeholder="например, mara"
                     value={nickname}
                   />
-                </label>
+                </div>
+              </label>
 
-                <label className="block">
-                  <span className="mb-1.5 block text-sm text-zinc-400">
-                    Пароль
-                  </span>
-                  <input
-                    autoComplete="current-password"
-                    className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-base placeholder:text-[var(--muted-2)] focus:border-[var(--accent)]"
-                    maxLength={72}
-                    minLength={6}
-                    name="password"
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="ваш пароль"
-                    type="password"
-                    value={password}
-                  />
-                </label>
+              {error ? <AuthError text={error} /> : null}
 
-                {error ? <AuthError text={error} /> : null}
-
-                <button
-                  className="hover-accent w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent transition disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={pending}
-                  type="submit"
-                >
-                  {pending ? "Секунду…" : "Войти"}
-                </button>
-              </form>
-
-              <div className="my-5 flex items-center gap-3">
-                <span className="h-px flex-1 bg-[var(--border)]" />
-                <span className="text-[11px] text-[var(--muted-2)]">или</span>
-                <span className="h-px flex-1 bg-[var(--border)]" />
+              <button
+                className="hover-accent w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent transition disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={pending || !nickname.trim()}
+                type="submit"
+              >
+                {pending ? "Создаём профиль…" : "Продолжить в Dirami"}
+              </button>
+              <button
+                className="w-full py-1 text-sm text-[var(--muted-2)] hover:text-[var(--text)]"
+                disabled={pending}
+                onClick={resetGoogleSetup}
+                type="button"
+              >
+                Выбрать другой Google-аккаунт
+              </button>
+            </form>
+          ) : (
+            <div>
+              <div className="mb-6 rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg)] p-4">
+                <p className="text-sm font-semibold">Единый безопасный вход</p>
+                <p className="mt-1.5 text-xs leading-5 text-[var(--muted-2)]">
+                  Вход и создание аккаунта выполняются только через Google. Для
+                  нового профиля после входа вы выберете собственный юз Dirami.
+                </p>
               </div>
+
               <GoogleSignInButton
                 disabled={pending}
                 onCredential={(credential) =>
                   void receiveGoogleCredential(credential)
                 }
               />
-              <p className="mt-3 text-center text-[11px] leading-4 text-[var(--muted-2)]">
-                Новый пользователь после Google выберет собственный юз. Старый
-                пользователь сможет безопасно перенести весь профиль.
-              </p>
-            </>
+
+              {pending ? (
+                <p className="mt-3 text-center text-xs text-[var(--muted-2)]">
+                  Подтверждаем Google-аккаунт…
+                </p>
+              ) : null}
+              {error ? (
+                <div className="mt-4">
+                  <AuthError text={error} />
+                </div>
+              ) : null}
+
+              <div className="mt-6 flex items-start gap-2.5 rounded-2xl bg-white/3 px-3 py-3 text-[11px] leading-4 text-[var(--muted-2)]">
+                <span className="mt-0.5 text-emerald-300">●</span>
+                <p>
+                  Email не публикуется. В настройках можно создать резервный
+                  пароль и подключить Google к старому профилю, пока его сессия
+                  ещё открыта.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </section>

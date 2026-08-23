@@ -166,6 +166,10 @@ export function AccountDrawer({
   onLogout,
 }: Props) {
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [logoutGoogleLinked, setLogoutGoogleLinked] = useState<boolean | null>(
+    null,
+  );
+  const [logoutChecking, setLogoutChecking] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -211,8 +215,33 @@ export function AccountDrawer({
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [confirmLogout, onClose]);
 
+  async function openLogoutConfirmation() {
+    setConfirmLogout(true);
+    setLogoutChecking(true);
+    setLogoutGoogleLinked(null);
+    setLogoutError("");
+    try {
+      const response = await fetch("/api/auth/google/status", {
+        cache: "no-store",
+      });
+      const data = (await response.json()) as {
+        linked?: boolean;
+        error?: string;
+      };
+      if (!response.ok) {
+        setLogoutError(data.error ?? "Не удалось проверить Google-аккаунт");
+        return;
+      }
+      setLogoutGoogleLinked(Boolean(data.linked));
+    } catch {
+      setLogoutError("Не удалось проверить Google-аккаунт");
+    } finally {
+      setLogoutChecking(false);
+    }
+  }
+
   async function confirm() {
-    if (loggingOut) return;
+    if (loggingOut || !logoutGoogleLinked) return;
     setLoggingOut(true);
     setLogoutError("");
     try {
@@ -340,7 +369,7 @@ export function AccountDrawer({
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-bold">Настройки</span>
                 <span className="block text-[11px] text-[var(--muted-2)]">
-                  Тема, пароль и параметры
+                  Google, резервный пароль и темы
                 </span>
               </span>
               <span className="text-lg text-[var(--muted-2)] transition group-hover:translate-x-0.5">
@@ -380,7 +409,7 @@ export function AccountDrawer({
         <div className="border-t border-[var(--border)] p-4">
           <button
             className="flex w-full items-center gap-3 rounded-[1.25rem] bg-red-500/10 px-3 py-3 text-left text-red-300 transition hover:bg-red-500/15"
-            onClick={() => setConfirmLogout(true)}
+            onClick={() => void openLogoutConfirmation()}
             type="button"
           >
             <span className="grid size-10 place-items-center rounded-2xl bg-red-500/10">
@@ -396,39 +425,120 @@ export function AccountDrawer({
         </div>
 
         {confirmLogout ? (
-          <div className="absolute inset-0 z-10 flex items-end bg-black/75 p-4 sm:items-center">
-            <div className="w-full rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)] p-5 shadow-2xl">
-              <span className="grid size-12 place-items-center rounded-2xl bg-red-500/10 text-red-300">
-                <MenuIcon name="logout" />
-              </span>
-              <h3 className="mt-4 text-lg font-extrabold">
-                Выйти из аккаунта?
-              </h3>
-              <p className="mt-1.5 text-sm leading-6 text-[var(--muted-2)]">
-                Вы уверены? Для возвращения потребуется снова ввести ник и
-                пароль.
-              </p>
-              {logoutError ? (
-                <p className="mt-2 text-xs text-red-300">{logoutError}</p>
-              ) : null}
-              <div className="mt-5 flex gap-2">
-                <button
-                  className="flex-1 rounded-full border border-[var(--border)] py-2.5 text-sm font-bold hover:bg-white/5"
-                  disabled={loggingOut}
-                  onClick={() => setConfirmLogout(false)}
-                  type="button"
-                >
-                  Остаться
-                </button>
-                <button
-                  className="flex-1 rounded-full bg-red-500 py-2.5 text-sm font-bold text-white transition hover:bg-red-400 disabled:opacity-50"
-                  disabled={loggingOut}
-                  onClick={() => void confirm()}
-                  type="button"
-                >
-                  {loggingOut ? "Выходим…" : "Да, выйти"}
-                </button>
-              </div>
+          <div className="absolute inset-0 z-10 flex items-end bg-black/80 p-4 backdrop-blur-sm sm:items-center">
+            <div className="relative w-full overflow-hidden rounded-[1.9rem] border border-[var(--border)] bg-[var(--panel)] p-5 shadow-2xl">
+              <div className="pointer-events-none absolute -top-16 -right-12 size-36 rounded-full bg-red-500/12 blur-3xl" />
+
+              {logoutChecking ? (
+                <div className="relative py-5 text-center">
+                  <span className="mx-auto block size-7 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+                  <p className="mt-3 text-sm font-semibold">
+                    Проверяем способ входа…
+                  </p>
+                </div>
+              ) : logoutGoogleLinked === false ? (
+                <div className="relative">
+                  <span className="grid size-12 place-items-center rounded-2xl bg-amber-400/10 text-xl text-amber-200">
+                    G
+                  </span>
+                  <h3 className="mt-4 text-lg font-extrabold">
+                    Сначала подключите Google
+                  </h3>
+                  <p className="mt-1.5 text-sm leading-6 text-[var(--muted-2)]">
+                    Вход по юзу и паролю отключён. Без привязанного Google вы не
+                    сможете вернуться в этот профиль после выхода.
+                  </p>
+                  {logoutError ? (
+                    <p className="mt-3 rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                      {logoutError}
+                    </p>
+                  ) : null}
+                  <div className="mt-5 flex gap-2">
+                    <button
+                      className="flex-1 rounded-full border border-[var(--border)] py-2.5 text-sm font-bold hover:bg-white/5"
+                      onClick={() => setConfirmLogout(false)}
+                      type="button"
+                    >
+                      Остаться
+                    </button>
+                    <button
+                      className="hover-accent flex-1 rounded-full bg-accent py-2.5 text-sm font-bold text-on-accent"
+                      onClick={() => {
+                        setConfirmLogout(false);
+                        onOpenSettings();
+                      }}
+                      type="button"
+                    >
+                      Открыть настройки
+                    </button>
+                  </div>
+                </div>
+              ) : logoutGoogleLinked ? (
+                <div className="relative">
+                  <span className="grid size-12 place-items-center rounded-2xl bg-red-500/10 text-red-300">
+                    <MenuIcon name="logout" />
+                  </span>
+                  <h3 className="mt-4 text-lg font-extrabold">
+                    Завершить сеанс?
+                  </h3>
+                  <p className="mt-1.5 text-sm leading-6 text-[var(--muted-2)]">
+                    Dirami закроется на этом устройстве и отключит локальные
+                    push-уведомления. Вернуться можно через подключённый Google.
+                  </p>
+                  {logoutError ? (
+                    <p className="mt-3 rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                      {logoutError}
+                    </p>
+                  ) : null}
+                  <div className="mt-5 flex gap-2">
+                    <button
+                      className="flex-1 rounded-full border border-[var(--border)] py-2.5 text-sm font-bold hover:bg-white/5"
+                      disabled={loggingOut}
+                      onClick={() => setConfirmLogout(false)}
+                      type="button"
+                    >
+                      Остаться
+                    </button>
+                    <button
+                      className="flex-1 rounded-full bg-red-500 py-2.5 text-sm font-bold text-white transition hover:bg-red-400 disabled:opacity-50"
+                      disabled={loggingOut}
+                      onClick={() => void confirm()}
+                      type="button"
+                    >
+                      {loggingOut ? "Завершаем…" : "Выйти"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative">
+                  <h3 className="text-lg font-extrabold">
+                    Не удалось проверить Google
+                  </h3>
+                  <p className="mt-1.5 text-sm leading-6 text-[var(--muted-2)]">
+                    Для безопасности выход временно недоступен. Проверьте сеть и
+                    попробуйте ещё раз.
+                  </p>
+                  {logoutError ? (
+                    <p className="mt-3 text-xs text-red-300">{logoutError}</p>
+                  ) : null}
+                  <div className="mt-5 flex gap-2">
+                    <button
+                      className="flex-1 rounded-full border border-[var(--border)] py-2.5 text-sm font-bold hover:bg-white/5"
+                      onClick={() => setConfirmLogout(false)}
+                      type="button"
+                    >
+                      Закрыть
+                    </button>
+                    <button
+                      className="flex-1 rounded-full bg-accent py-2.5 text-sm font-bold text-on-accent"
+                      onClick={() => void openLogoutConfirmation()}
+                      type="button"
+                    >
+                      Повторить
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : null}

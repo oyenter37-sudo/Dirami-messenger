@@ -5,7 +5,6 @@ import { GoogleSignInButton } from "@/components/google-sign-in-button";
 
 type GoogleStatus = {
   linked: boolean;
-  hasPassword: boolean;
   googleProfile: {
     email: string;
     name: string;
@@ -49,11 +48,10 @@ export function GoogleAccountSettings() {
         setMessage(data.error ?? "Не удалось подключить Google");
         return;
       }
-      setStatus((current) => ({
+      setStatus({
         linked: true,
-        hasPassword: current?.hasPassword ?? true,
         googleProfile: data.googleProfile ?? null,
-      }));
+      });
       setMessage("Google подключён. Весь прогресс остался в этом профиле");
     } catch {
       setMessage("Сеть недоступна");
@@ -86,12 +84,6 @@ export function GoogleAccountSettings() {
             Чаты, NFT, профиль, галочка и лимиты привязаны к тому же профилю
             Dirami.
           </p>
-          {!status.hasPassword ? (
-            <p className="mt-2 text-[11px] text-amber-200/80">
-              Ниже можно создать резервный пароль. Поле текущего пароля оставьте
-              пустым.
-            </p>
-          ) : null}
         </div>
       ) : status ? (
         <div className="mt-4">

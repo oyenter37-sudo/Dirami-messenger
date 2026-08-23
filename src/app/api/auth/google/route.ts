@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { jsonError, requireSession } from "@/lib/api";
-import { attachSession, verifyPassword } from "@/lib/auth";
+import { attachSession } from "@/lib/auth";
 import {
   type VerifiedGoogleIdentity,
   verifyGoogleCredential,
@@ -14,23 +14,15 @@ import {
   rateLimitResponse,
   requestAddress,
 } from "@/lib/rate-limit";
-import { parseNickname, parsePassword } from "@/lib/validators";
+import { parseNickname } from "@/lib/validators";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DUMMY_PASSWORD_HASH =
-  "$2b$12$ZqUYX8d6b.XcBhQ9CDD.yeE6Mrtb0jYUVOEqbqWe3DGWpjYUWHymW";
-
-type GoogleAction = "login" | "register" | "link" | "link_session";
+type GoogleAction = "login" | "register" | "link_session";
 
 function isGoogleAction(value: unknown): value is GoogleAction {
-  return (
-    value === "login" ||
-    value === "register" ||
-    value === "link" ||
-    value === "link_session"
-  );
+  return value === "login" || value === "register" || value === "link_session";
 }
 
 function googleProfile(identity: VerifiedGoogleIdentity) {
@@ -92,7 +84,6 @@ async function handleGoogleAuth(request: Request) {
     action?: unknown;
     credential?: unknown;
     nickname?: unknown;
-    password?: unknown;
   };
   if (!isGoogleAction(payload.action)) {
     return jsonError("Некорректное действие Google", 400);
@@ -224,10 +215,7 @@ async function handleGoogleAuth(request: Request) {
     ]);
     if (linkedGoogle) return googleLinkConflict();
     if (existingNickname) {
-      return jsonError(
-        "Этот ник уже занят. Если профиль ваш — выберите перенос существующего аккаунта",
-        409,
-      );
+      return jsonError("Этот юз уже занят. Выберите другой", 409);
     }
 
     const attemptLimit = await consumeRateLimit({
@@ -282,78 +270,7 @@ async function handleGoogleAuth(request: Request) {
     }
   }
 
-  const nickname = parseNickname(payload.nickname);
-  const password = parsePassword(payload.password);
-  if (!nickname || !password) {
-    return jsonError("Неверный ник или пароль", 400);
-  }
-
-  const loginLimit = await consumeRateLimit({
-    subject: `${address}:login:${nickname.toLowerCase()}`,
-    action: "login_attempt_v2",
-    limit: 10,
-    windowMs: 5 * MINUTE,
-  });
-  if (!loginLimit.allowed) {
-    return rateLimitResponse(
-      loginLimit,
-      "Слишком много попыток. Подождите несколько минут",
-    );
-  }
-
-  const [user, linkedGoogle] = await Promise.all([
-    prisma.user.findFirst({
-      where: { nickname: { equals: nickname, mode: "insensitive" } },
-      select: {
-        id: true,
-        nickname: true,
-        sessionVersion: true,
-        passwordHash: true,
-        googleAccount: { select: { googleSubject: true } },
-      },
-    }),
-    prisma.googleAccount.findUnique({
-      where: { googleSubject: identity.subject },
-      select: { userId: true },
-    }),
-  ]);
-  const validPassword = await verifyPassword(
-    password,
-    user?.passwordHash ?? DUMMY_PASSWORD_HASH,
-  );
-  if (!user || !user.passwordHash || !validPassword) {
-    return jsonError("Неверный ник или пароль", 401);
-  }
-  if (linkedGoogle && linkedGoogle.userId !== user.id) {
-    return googleLinkConflict();
-  }
-  if (
-    user.googleAccount &&
-    user.googleAccount.googleSubject !== identity.subject
-  ) {
-    return jsonError("К этому профилю уже привязан другой Google-аккаунт", 409);
-  }
-
-  try {
-    await prisma.googleAccount.upsert({
-      where: { googleSubject: identity.subject },
-      create: {
-        googleSubject: identity.subject,
-        userId: user.id,
-        ...googleAccountData(identity),
-      },
-      update: googleAccountData(identity),
-    });
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return jsonError("Google уже привязан к другому профилю", 409);
-    }
-    throw error;
-  }
-  return sessionResponse(user);
+  return jsonError("Некорректное действие Google", 400);
 }
 
 export async function POST(request: Request) {

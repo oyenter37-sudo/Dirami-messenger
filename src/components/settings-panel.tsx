@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AdminNewsPublisher } from "@/components/admin-news-publisher";
 import { AdminNftManager } from "@/components/admin-nft-manager";
 import { AdminUserLimits } from "@/components/admin-user-limits";
+import { BackupPasswordSettings } from "@/components/backup-password-settings";
 import { GoogleAccountSettings } from "@/components/google-account-settings";
 import { VerifiedName } from "@/components/verified-name";
 import { applyTheme, readTheme, THEMES, type ThemeId } from "@/lib/theme";
@@ -22,10 +23,6 @@ export function SettingsPanel({
   onClose,
 }: Props) {
   const [theme, setTheme] = useState<ThemeId>(readTheme);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [repeatPassword, setRepeatPassword] = useState("");
-  const [passwordMsg, setPasswordMsg] = useState("");
   const [nftName, setNftName] = useState("");
   const [nftQty, setNftQty] = useState("1");
   const [nftValue, setNftValue] = useState("");
@@ -35,36 +32,6 @@ export function SettingsPanel({
   function pickTheme(id: ThemeId) {
     setTheme(id);
     applyTheme(id);
-  }
-
-  async function changePassword() {
-    setPasswordMsg("");
-    if (newPassword.length < 8) {
-      setPasswordMsg("Новый пароль: минимум 8 символов");
-      return;
-    }
-    if (newPassword !== repeatPassword) {
-      setPasswordMsg("Новые пароли не совпадают");
-      return;
-    }
-    try {
-      const response = await fetch("/api/auth/password", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setPasswordMsg(data.error ?? "Не получилось");
-        return;
-      }
-      setCurrentPassword("");
-      setNewPassword("");
-      setRepeatPassword("");
-      setPasswordMsg("Пароль обновлён");
-    } catch {
-      setPasswordMsg("Сеть недоступна");
-    }
   }
 
   async function mintNft() {
@@ -167,56 +134,7 @@ export function SettingsPanel({
 
           <GoogleAccountSettings />
 
-          <section className="rounded-3xl border border-[var(--border)] bg-[var(--panel)] p-4">
-            <p className="mb-1 text-[13px] font-semibold">Пароль</p>
-            <p className="mb-3 text-[11px] leading-4 text-[var(--muted-2)]">
-              Если аккаунт создан через Google и пароля ещё нет, оставьте поле
-              текущего пароля пустым.
-            </p>
-            <div className="space-y-2">
-              <input
-                autoComplete="current-password"
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-sm"
-                maxLength={72}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                placeholder="Текущий пароль"
-                type="password"
-                value={currentPassword}
-              />
-              <input
-                autoComplete="new-password"
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-sm"
-                maxLength={72}
-                minLength={8}
-                onChange={(event) => setNewPassword(event.target.value)}
-                placeholder="Новый пароль · минимум 8 символов"
-                type="password"
-                value={newPassword}
-              />
-              <input
-                autoComplete="new-password"
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-sm"
-                maxLength={72}
-                minLength={8}
-                onChange={(event) => setRepeatPassword(event.target.value)}
-                placeholder="Повтори новый пароль"
-                type="password"
-                value={repeatPassword}
-              />
-            </div>
-            <button
-              className="mt-3 w-full rounded-full border border-[var(--border)] py-2.5 text-sm font-semibold hover:bg-white/5"
-              onClick={() => void changePassword()}
-              type="button"
-            >
-              Сменить пароль
-            </button>
-            {passwordMsg ? (
-              <p className="mt-2 text-xs text-[var(--muted-2)]">
-                {passwordMsg}
-              </p>
-            ) : null}
-          </section>
+          <BackupPasswordSettings />
 
           {isAdmin ? (
             <section className="rounded-3xl border border-[var(--accent)]/30 bg-[var(--panel)] p-4">

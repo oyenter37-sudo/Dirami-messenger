@@ -14,6 +14,19 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+export async function GET() {
+  const auth = await requireSession();
+  if (auth.error) return auth.error;
+
+  const user = await prisma.user.findUnique({
+    where: { id: auth.session.userId },
+    select: { passwordHash: true },
+  });
+  if (!user) return jsonError("Нужно войти", 401);
+
+  return NextResponse.json({ hasPassword: Boolean(user.passwordHash) });
+}
+
 export async function POST(request: Request) {
   const guard = mutationGuard(request);
   if (guard) return guard;
@@ -77,7 +90,7 @@ export async function POST(request: Request) {
     select: { nickname: true, sessionVersion: true },
   });
 
-  return attachSession(NextResponse.json({ ok: true }), {
+  return attachSession(NextResponse.json({ ok: true, hasPassword: true }), {
     userId: user.id,
     nickname: updated.nickname,
     sessionVersion: updated.sessionVersion,
