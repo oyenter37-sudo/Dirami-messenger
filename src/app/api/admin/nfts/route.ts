@@ -14,6 +14,7 @@ const userSelect = {
   nickname: true,
   displayName: true,
   isVerified: true,
+  isHyperVerified: true,
 } as const;
 
 const nftSelect = {

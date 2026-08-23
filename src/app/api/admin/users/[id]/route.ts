@@ -35,16 +35,21 @@ export async function PATCH(
     nickname?: unknown;
     displayName?: unknown;
     isVerified?: unknown;
+    isHyperVerified?: unknown;
     limits?: Partial<Record<UserLimitKey, unknown>>;
   };
   const nickname = parseNickname(payload.nickname);
   const displayName = parseDisplayName(payload.displayName);
   const isVerified = payload.isVerified;
+  const isHyperVerified = payload.isHyperVerified;
   if (!nickname)
     return jsonError("Юзернейм: 3–24 символа, буквы, цифры или _", 400);
   if (!displayName) return jsonError("Имя: 1–40 символов", 400);
   if (typeof isVerified !== "boolean") {
     return jsonError("Некорректный статус верификации", 400);
+  }
+  if (typeof isHyperVerified !== "boolean") {
+    return jsonError("Некорректный статус гиперподтверждения", 400);
   }
 
   const limits = { ...DEFAULT_USER_LIMITS } as UserLimits;
@@ -77,7 +82,7 @@ export async function PATCH(
     const [user] = await prisma.$transaction([
       prisma.user.update({
         where: { id },
-        data: { nickname, displayName, isVerified },
+        data: { nickname, displayName, isVerified, isHyperVerified },
         select: {
           id: true,
           nickname: true,
@@ -85,6 +90,7 @@ export async function PATCH(
           avatarUrl: true,
           isAdmin: true,
           isVerified: true,
+          isHyperVerified: true,
           createdAt: true,
         },
       }),

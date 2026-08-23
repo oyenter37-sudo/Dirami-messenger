@@ -11,10 +11,12 @@ type ProfilePreview = Pick<
   | "nickname"
   | "displayName"
   | "bio"
+  | "extraProfile"
   | "avatarUrl"
   | "profileAccent"
   | "profileBackground"
   | "isVerified"
+  | "isHyperVerified"
 >;
 
 function PublicBackdrop() {

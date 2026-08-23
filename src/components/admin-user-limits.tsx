@@ -16,6 +16,7 @@ type AdminUser = {
   avatarUrl: string;
   isAdmin: boolean;
   isVerified: boolean;
+  isHyperVerified: boolean;
   createdAt: string;
   limits: UserLimits;
 };
@@ -28,6 +29,7 @@ export function AdminUserLimits() {
   const [nickname, setNickname] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [isVerified, setIsVerified] = useState(false);
+  const [isHyperVerified, setIsHyperVerified] = useState(false);
   const [limits, setLimits] = useState<UserLimits | null>(null);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -72,6 +74,7 @@ export function AdminUserLimits() {
     setNickname(user.nickname);
     setDisplayName(user.displayName || user.nickname);
     setIsVerified(user.isVerified);
+    setIsHyperVerified(user.isHyperVerified);
     setLimits({ ...user.limits });
     setMessage("");
   }
@@ -89,7 +92,13 @@ export function AdminUserLimits() {
       const response = await fetch(`/api/admin/users/${selected.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ nickname, displayName, isVerified, limits }),
+        body: JSON.stringify({
+          nickname,
+          displayName,
+          isVerified,
+          isHyperVerified,
+          limits,
+        }),
       });
       const data = (await response.json()) as {
         user?: AdminUser;
@@ -106,8 +115,9 @@ export function AdminUserLimits() {
       setNickname(data.user.nickname);
       setDisplayName(data.user.displayName);
       setIsVerified(data.user.isVerified);
+      setIsHyperVerified(data.user.isHyperVerified);
       setLimits({ ...data.user.limits });
-      setMessage("Пользователь, галочка и лимиты обновлены");
+      setMessage("Пользователь, статусы и лимиты обновлены");
     } catch {
       setMessage("Сеть недоступна");
     } finally {
@@ -168,6 +178,7 @@ export function AdminUserLimits() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1 text-sm font-bold">
                     <VerifiedName
+                      isHyperVerified={user.isHyperVerified}
                       isVerified={user.isVerified}
                       name={user.displayName || user.nickname}
                       truncate
@@ -242,6 +253,25 @@ export function AdminUserLimits() {
             />
           </label>
 
+          <label className="mt-3 flex cursor-pointer items-center justify-between gap-4 overflow-hidden rounded-2xl border border-fuchsia-400/25 bg-[linear-gradient(115deg,rgba(244,114,182,.08),rgba(56,189,248,.06),rgba(250,204,21,.07))] px-3.5 py-3">
+            <span className="min-w-0">
+              <span className="flex flex-wrap items-center gap-1.5 text-[12px] font-extrabold text-fuchsia-100">
+                Гиперподтверждение
+                <VerifiedName isHyperVerified name="Пример" />
+              </span>
+              <span className="mt-0.5 block text-[10px] leading-4 text-[var(--muted-2)]">
+                Независимый радужный статус, раздел «Дополнительно» и особые
+                реакции
+              </span>
+            </span>
+            <input
+              checked={isHyperVerified}
+              className="size-5 shrink-0 accent-fuchsia-400"
+              onChange={(event) => setIsHyperVerified(event.target.checked)}
+              type="checkbox"
+            />
+          </label>
+
           <p className="mt-6 mb-2 text-[10px] font-extrabold tracking-[0.13em] text-[var(--muted-2)] uppercase">
             Все доступные лимиты
           </p>
@@ -281,7 +311,7 @@ export function AdminUserLimits() {
             onClick={() => void save()}
             type="button"
           >
-            {saving ? "Сохраняем…" : "Сохранить профиль, галочку и лимиты"}
+            {saving ? "Сохраняем…" : "Сохранить профиль, статусы и лимиты"}
           </button>
         </div>
       ) : null}

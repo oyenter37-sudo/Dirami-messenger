@@ -13,6 +13,7 @@ type Props = {
   nickname: string;
   displayName?: string;
   isVerified?: boolean;
+  isHyperVerified?: boolean;
   onClose: () => void;
   newsUnread: number;
   onOpenProfile: () => void;
@@ -157,6 +158,7 @@ export function AccountDrawer({
   nickname,
   displayName,
   isVerified,
+  isHyperVerified,
   newsUnread,
   onClose,
   onOpenProfile,
@@ -177,6 +179,9 @@ export function AccountDrawer({
     displayName || nickname,
   );
   const [currentVerified, setCurrentVerified] = useState(Boolean(isVerified));
+  const [currentHyperVerified, setCurrentHyperVerified] = useState(
+    Boolean(isHyperVerified),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -188,6 +193,7 @@ export function AccountDrawer({
             avatarUrl?: string;
             displayName?: string;
             isVerified?: boolean;
+            isHyperVerified?: boolean;
           };
         }) => {
           if (!cancelled) {
@@ -196,6 +202,9 @@ export function AccountDrawer({
               data.user?.displayName || displayName || nickname,
             );
             setCurrentVerified(Boolean(data.user?.isVerified ?? isVerified));
+            setCurrentHyperVerified(
+              Boolean(data.user?.isHyperVerified ?? isHyperVerified),
+            );
           }
         },
       )
@@ -203,7 +212,7 @@ export function AccountDrawer({
     return () => {
       cancelled = true;
     };
-  }, [displayName, isVerified, nickname]);
+  }, [displayName, isHyperVerified, isVerified, nickname]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -294,6 +303,7 @@ export function AccountDrawer({
             <div className="min-w-0">
               <p className="truncate text-sm font-extrabold">
                 <VerifiedName
+                  isHyperVerified={currentHyperVerified}
                   isVerified={currentVerified}
                   name={currentDisplayName}
                   truncate

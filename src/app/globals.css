@@ -159,7 +159,11 @@ input:focus {
 
 .profile-shell {
   background:
-    radial-gradient(circle at 85% 12%, color-mix(in srgb, var(--profile-accent) 7%, transparent), transparent 32%),
+    radial-gradient(
+      circle at 85% 12%,
+      color-mix(in srgb, var(--profile-accent) 7%, transparent),
+      transparent 32%
+    ),
     var(--bg);
 }
 
@@ -383,7 +387,10 @@ input:focus {
     radial-gradient(900px 480px at 0% -10%, var(--glow-a), transparent 58%),
     radial-gradient(820px 420px at 110% 110%, var(--glow-b), transparent 52%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.045' stroke-width='1.2'%3E%3Ccircle cx='28' cy='34' r='10'/%3E%3Ccircle cx='96' cy='22' r='5'/%3E%3Ccircle cx='150' cy='58' r='14'/%3E%3Ccircle cx='62' cy='98' r='7'/%3E%3Ccircle cx='128' cy='124' r='9'/%3E%3Cpath d='M18 142c8-4 16 2 14 10M84 156c6 8 18 4 16-6M158 150c-10 2-12 14-2 16'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: auto, auto, 360px 360px;
+  background-size:
+    auto,
+    auto,
+    360px 360px;
 }
 
 .apple-emoji {
@@ -432,7 +439,118 @@ input:focus {
   }
 }
 
+.hyper-verified-name {
+  background-image: linear-gradient(
+    105deg,
+    #ff6a8b 0%,
+    #ffc94f 18%,
+    #79efad 36%,
+    #61d5ff 54%,
+    #ac83ff 72%,
+    #ff72df 88%,
+    #ff6a8b 100%
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 7px rgb(117 205 255 / 0.3));
+  animation: hyper-check-shimmer 3.2s linear infinite;
+}
+
+.hyper-verified-badge {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  width: 1.12em;
+  height: 1.12em;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  border: 1px solid rgb(255 255 255 / 0.72);
+  border-radius: 999px;
+  background: rgb(14 16 30 / 0.86);
+  box-shadow:
+    0 0 4px rgb(255 255 255 / 0.82),
+    0 0 9px rgb(255 80 213 / 0.72),
+    0 0 14px rgb(65 205 255 / 0.52);
+  font-size: 0.92em;
+  font-weight: 1000;
+  line-height: 1;
+  animation: hyper-badge-pulse 2.4s ease-in-out infinite;
+}
+
+.hyper-verified-badge::before {
+  position: absolute;
+  z-index: -1;
+  inset: -0.15em;
+  border-radius: inherit;
+  background: conic-gradient(
+    #ff3b76,
+    #ffa53f,
+    #ffe45e,
+    #4cf3a0,
+    #48ceff,
+    #9474ff,
+    #ff59d4,
+    #ff3b76
+  );
+  content: "";
+  filter: blur(0.16em);
+  opacity: 0.64;
+  animation: hyper-badge-orbit 3.1s linear infinite;
+}
+
+.hyper-verified-badge > span {
+  background-image: linear-gradient(
+    105deg,
+    #ff4a82,
+    #ffcf4e,
+    #68efa4,
+    #5cd6ff,
+    #a47cff,
+    #ff65dc,
+    #ff4a82
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 2px rgb(255 255 255 / 0.9));
+  animation: hyper-check-shimmer 2.15s linear infinite;
+}
+
+@keyframes hyper-check-shimmer {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 260% 50%;
+  }
+}
+
+@keyframes hyper-badge-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hyper-badge-pulse {
+  0%,
+  100% {
+    transform: translateZ(0) scale(1);
+  }
+  50% {
+    transform: translateZ(0) scale(1.07);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hyper-verified-name,
+  .hyper-verified-badge,
+  .hyper-verified-badge::before,
+  .hyper-verified-badge > span,
   .dirami-shimmer,
   .profile-in,
   .nft-sheet-in,

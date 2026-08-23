@@ -21,7 +21,7 @@ import { AppleEmoji } from "@/components/apple-emoji";
 import { RichText } from "@/components/rich-text";
 import { VoiceMessagePlayer } from "@/components/voice-message-player";
 import { VoiceRecorder } from "@/components/voice-recorder";
-import { REACTIONS } from "@/lib/reactions";
+import { HYPER_REACTIONS, REACTIONS } from "@/lib/reactions";
 import { playMessageSound, unlockMessageSounds } from "@/lib/message-sounds";
 import type {
   ChatMessage,
@@ -445,6 +445,7 @@ export function MessengerApp({
                       <span className="flex items-center justify-between gap-2">
                         <span className="min-w-0 truncate text-sm font-medium">
                           <VerifiedName
+                            isHyperVerified={item.user.isHyperVerified}
                             isVerified={item.user.isVerified}
                             name={item.user.displayName || item.user.nickname}
                             truncate
@@ -524,6 +525,7 @@ export function MessengerApp({
       {accountOpen ? (
         <AccountDrawer
           displayName={me.displayName}
+          isHyperVerified={me.isHyperVerified}
           isVerified={me.isVerified}
           newsUnread={newsUnread}
           nickname={me.nickname}
@@ -565,6 +567,7 @@ export function MessengerApp({
       {settingsOpen ? (
         <SettingsPanel
           isAdmin={Boolean(me.isAdmin)}
+          isHyperVerified={Boolean(me.isHyperVerified)}
           isVerified={Boolean(me.isVerified)}
           nickname={me.nickname}
           onClose={() => setSettingsOpen(false)}
@@ -621,6 +624,7 @@ function Conversation({
     nickname: string;
     displayName: string;
     isVerified: boolean;
+    isHyperVerified: boolean;
     avatarUrl: string;
   };
   initialState: ChatState;
@@ -648,6 +652,9 @@ function Conversation({
   const pressStart = useRef({ x: 0, y: 0 });
   const [enterIds, setEnterIds] = useState<string[]>([]);
   const peerName = peer.displayName || peer.nickname;
+  const availableReactions = me.isHyperVerified
+    ? [...REACTIONS, ...HYPER_REACTIONS]
+    : REACTIONS;
 
   function clearPress() {
     if (pressTimer.current) {
@@ -659,7 +666,7 @@ function Conversation({
   function openMenu(id: string, x: number, y: number, mine: boolean) {
     window.getSelection()?.removeAllRanges();
     const width = 228;
-    const height = 278;
+    const height = me.isHyperVerified ? 310 : 278;
     let left = mine ? x - width + 12 : x - 12;
     let top = y - 64;
     left = Math.min(Math.max(10, left), window.innerWidth - width - 10);
@@ -959,6 +966,7 @@ function Conversation({
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">
               <VerifiedName
+                isHyperVerified={peer.isHyperVerified}
                 isVerified={peer.isVerified}
                 name={peerName}
                 truncate
@@ -1056,6 +1064,7 @@ function Conversation({
                       >
                         <p className="text-[11px] font-bold">
                           <VerifiedName
+                            isHyperVerified={message.replyTo.isHyperVerified}
                             isVerified={message.replyTo.isVerified}
                             name={message.replyTo.nickname}
                           />
@@ -1133,17 +1142,23 @@ function Conversation({
             onClick={(event) => event.stopPropagation()}
             style={{ left: menu.x, top: menu.y }}
           >
-            <div className="flex justify-between gap-0.5 px-1.5 pt-1.5 pb-1">
-              {REACTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  className="grid size-7 place-items-center rounded-full text-[15px] hover:bg-white/10"
-                  onClick={() => void react(menu.id, emoji)}
-                  type="button"
-                >
-                  <AppleEmoji emoji={emoji} />
-                </button>
-              ))}
+            <div className="grid grid-cols-7 gap-0.5 px-1.5 pt-1.5 pb-1">
+              {availableReactions.map((emoji) => {
+                const hyper = (HYPER_REACTIONS as readonly string[]).includes(
+                  emoji,
+                );
+                return (
+                  <button
+                    key={emoji}
+                    className={`grid size-7 place-items-center rounded-full text-[15px] hover:bg-white/10 ${hyper ? "bg-fuchsia-400/8 shadow-[inset_0_0_10px_rgba(217,70,239,.12)]" : ""}`}
+                    onClick={() => void react(menu.id, emoji)}
+                    title={hyper ? "Гиперреакция" : "Реакция"}
+                    type="button"
+                  >
+                    <AppleEmoji emoji={emoji} />
+                  </button>
+                );
+              })}
             </div>
             <div className="mx-2 h-px bg-white/10" />
             <button

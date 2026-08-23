@@ -2,6 +2,7 @@
 
 import { type CSSProperties, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
+import { VerifiedName } from "@/components/verified-name";
 import {
   PROFILE_ACCENTS,
   PROFILE_BACKGROUNDS,
@@ -19,6 +20,7 @@ type Props = {
 
 export function ProfileEditor({ user, onClose, onSaved }: Props) {
   const [bio, setBio] = useState(user.bio);
+  const [extraProfile, setExtraProfile] = useState(user.extraProfile);
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
   const [accent, setAccent] = useState(
     normalizeProfileAccent(user.profileAccent),
@@ -39,6 +41,7 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           bio,
+          ...(user.isHyperVerified ? { extraProfile } : {}),
           avatarUrl,
           profileAccent: accent,
           profileBackground: background,
@@ -106,7 +109,12 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
               />
               <div className="min-w-0 pb-1 text-white">
                 <p className="truncate text-lg font-extrabold">
-                  {user.displayName || user.nickname}
+                  <VerifiedName
+                    isHyperVerified={user.isHyperVerified}
+                    isVerified={user.isVerified}
+                    name={user.displayName || user.nickname}
+                    truncate
+                  />
                 </p>
                 <p className="truncate text-xs text-white/65">
                   @{user.nickname}
@@ -163,6 +171,34 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
               value={bio}
             />
           </section>
+
+          {user.isHyperVerified ? (
+            <section className="relative mt-6 overflow-hidden rounded-[1.5rem] border border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(244,114,182,.08),rgba(56,189,248,.06),rgba(250,204,21,.06))] p-3.5">
+              <div className="pointer-events-none absolute -top-10 -right-8 size-28 rounded-full bg-fuchsia-400/10 blur-2xl" />
+              <div className="relative mb-2 flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-extrabold">Дополнительно</p>
+                    <VerifiedName isHyperVerified name="" />
+                  </div>
+                  <p className="mt-0.5 text-[11px] leading-5 text-[var(--muted-2)]">
+                    Особый публичный раздел гиперподтверждённого профиля
+                  </p>
+                </div>
+                <span className="shrink-0 text-[10px] text-[var(--muted-2)]">
+                  {extraProfile.length}/1200
+                </span>
+              </div>
+              <textarea
+                className="relative min-h-36 w-full resize-y rounded-2xl border border-white/10 bg-black/15 px-3.5 py-3 text-sm leading-6 placeholder:text-[var(--muted-2)]"
+                id="profile-extra"
+                maxLength={1200}
+                onChange={(event) => setExtraProfile(event.target.value)}
+                placeholder="Расскажите больше: важные ссылки, проекты, роль в сообществе…"
+                value={extraProfile}
+              />
+            </section>
+          ) : null}
 
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">

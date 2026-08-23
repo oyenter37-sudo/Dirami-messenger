@@ -69,7 +69,12 @@ export async function POST(request: Request) {
         content: true,
         createdAt: true,
         author: {
-          select: { nickname: true, displayName: true, isVerified: true },
+          select: {
+            nickname: true,
+            displayName: true,
+            isVerified: true,
+            isHyperVerified: true,
+          },
         },
       },
     });

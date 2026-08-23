@@ -59,7 +59,12 @@ export async function GET(request: Request) {
       content: true,
       createdAt: true,
       author: {
-        select: { nickname: true, displayName: true, isVerified: true },
+        select: {
+          nickname: true,
+          displayName: true,
+          isVerified: true,
+          isHyperVerified: true,
+        },
       },
       reads: {
         where: { userId: me },

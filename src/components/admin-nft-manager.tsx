@@ -8,6 +8,7 @@ type AdminNftUser = {
   nickname: string;
   displayName: string;
   isVerified: boolean;
+  isHyperVerified: boolean;
 };
 
 type AdminNft = {
@@ -408,6 +409,7 @@ export function AdminNftManager() {
                           <span className="min-w-0">
                             <VerifiedName
                               className="block truncate text-sm font-bold"
+                              isHyperVerified={user.isHyperVerified}
                               isVerified={user.isVerified}
                               name={ownerLabel(user)}
                             />

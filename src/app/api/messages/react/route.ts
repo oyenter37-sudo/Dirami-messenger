@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireSession } from "@/lib/api";
-import { isReactionEmoji } from "@/lib/reactions";
+import { isHyperReactionEmoji, isReactionEmoji } from "@/lib/reactions";
 import { messageInclude, serializeMessage } from "@/lib/serialize-message";
 import { chatPair } from "@/lib/chat-state";
 import {
@@ -39,6 +39,19 @@ export async function POST(request: Request) {
   }
 
   const me = auth.session.userId;
+  if (isHyperReactionEmoji(emoji)) {
+    const reactor = await prisma.user.findUnique({
+      where: { id: me },
+      select: { isHyperVerified: true },
+    });
+    if (!reactor?.isHyperVerified) {
+      return jsonError(
+        "Эта реакция доступна только гиперподтверждённым пользователям",
+        403,
+      );
+    }
+  }
+
   const limits = await getUserLimits(me);
   const reactionLimit = await consumeRateLimit({
     subject: `user:${me}`,

@@ -5,6 +5,7 @@ export type SessionUser = {
   displayName?: string;
   isAdmin?: boolean;
   isVerified?: boolean;
+  isHyperVerified?: boolean;
 };
 
 export type NftItem = {
@@ -28,6 +29,7 @@ export type NftPerson = {
   nickname: string;
   displayName: string;
   isVerified: boolean;
+  isHyperVerified: boolean;
 };
 
 export type NewsItem = {
@@ -40,6 +42,7 @@ export type NewsItem = {
     nickname: string;
     displayName: string;
     isVerified: boolean;
+    isHyperVerified: boolean;
   };
 };
 
@@ -48,7 +51,9 @@ export type PublicUser = {
   nickname: string;
   displayName: string;
   isVerified: boolean;
+  isHyperVerified: boolean;
   bio: string;
+  extraProfile: string;
   avatarUrl: string;
   profileAccent: string;
   profileBackground: string;
@@ -102,6 +107,7 @@ export type ChatMessage = {
     senderId: string;
     nickname: string;
     isVerified: boolean;
+    isHyperVerified: boolean;
     voiceDurationMs: number | null;
   } | null;
   reactions: {

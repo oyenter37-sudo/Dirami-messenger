@@ -150,6 +150,7 @@ export function NewsPanel({ onClose, onUnreadChange }: Props) {
                       <p className="mt-1 text-[10px] text-[var(--muted-2)]">
                         {newsDate(item.createdAt)} ·{" "}
                         <VerifiedName
+                          isHyperVerified={item.author.isHyperVerified}
                           isVerified={item.author.isVerified}
                           name={item.author.displayName || item.author.nickname}
                         />

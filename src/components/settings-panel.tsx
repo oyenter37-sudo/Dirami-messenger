@@ -13,6 +13,7 @@ type Props = {
   nickname: string;
   isAdmin: boolean;
   isVerified: boolean;
+  isHyperVerified: boolean;
   onClose: () => void;
 };
 
@@ -20,6 +21,7 @@ export function SettingsPanel({
   nickname,
   isAdmin,
   isVerified,
+  isHyperVerified,
   onClose,
 }: Props) {
   const [theme, setTheme] = useState<ThemeId>(readTheme);
@@ -86,7 +88,11 @@ export function SettingsPanel({
           <div>
             <p className="text-[17px] font-bold">Настройки</p>
             <p className="text-xs text-[var(--muted-2)]">
-              <VerifiedName isVerified={isVerified} name={nickname} />
+              <VerifiedName
+                isHyperVerified={isHyperVerified}
+                isVerified={isVerified}
+                name={nickname}
+              />
               {isAdmin ? " · админ" : ""}
             </p>
           </div>

@@ -21,12 +21,18 @@ export async function generateMetadata({
 
   const user = await prisma.user.findFirst({
     where: { nickname: { equals: username, mode: "insensitive" } },
-    select: { nickname: true, displayName: true, bio: true, isVerified: true },
+    select: {
+      nickname: true,
+      displayName: true,
+      bio: true,
+      isVerified: true,
+      isHyperVerified: true,
+    },
   });
   if (!user) return { title: "Профиль не найден" };
 
   const name = user.displayName || user.nickname;
-  const title = `${name}${user.isVerified ? " ✓" : ""} (@${user.nickname})`;
+  const title = `${name}${user.isVerified ? " ✓" : ""}${user.isHyperVerified ? " ✦" : ""} (@${user.nickname})`;
   const description =
     user.bio || `Публичный профиль @${user.nickname} в мессенджере Dirami`;
   const path = userPublicPath(user.nickname);
@@ -73,10 +79,12 @@ export default async function UserLinkPage({ params }: PageProps) {
         nickname: true,
         displayName: true,
         bio: true,
+        extraProfile: true,
         avatarUrl: true,
         profileAccent: true,
         profileBackground: true,
         isVerified: true,
+        isHyperVerified: true,
       },
     }),
   ]);

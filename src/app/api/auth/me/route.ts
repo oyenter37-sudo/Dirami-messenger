@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonError, requireSession } from "@/lib/api";
 import {
   parseBio,
+  parseExtraProfile,
   parseOptionalHttpUrl,
   parseProfileAccent,
   parseProfileBackground,
@@ -24,7 +25,9 @@ const publicProfileSelect = {
   nickname: true,
   displayName: true,
   isVerified: true,
+  isHyperVerified: true,
   bio: true,
+  extraProfile: true,
   avatarUrl: true,
   profileAccent: true,
   profileBackground: true,
@@ -89,12 +92,14 @@ export async function PATCH(request: Request) {
 
   const payload = body as {
     bio?: unknown;
+    extraProfile?: unknown;
     avatarUrl?: unknown;
     profileAccent?: unknown;
     profileBackground?: unknown;
   };
   const data: {
     bio?: string;
+    extraProfile?: string;
     avatarUrl?: string;
     profileAccent?: string;
     profileBackground?: string;
@@ -104,6 +109,25 @@ export async function PATCH(request: Request) {
     const bio = parseBio(payload.bio);
     if (bio === null) return jsonError("Описание до 280 символов", 400);
     data.bio = bio;
+  }
+
+  if (Object.hasOwn(payload, "extraProfile")) {
+    const owner = await prisma.user.findUnique({
+      where: { id: auth.session.userId },
+      select: { isHyperVerified: true },
+    });
+    if (!owner) return jsonError("Нужно войти", 401);
+    if (!owner.isHyperVerified) {
+      return jsonError(
+        "Раздел «Дополнительно» доступен только гиперподтверждённым пользователям",
+        403,
+      );
+    }
+    const extraProfile = parseExtraProfile(payload.extraProfile);
+    if (extraProfile === null) {
+      return jsonError("Дополнительный текст — до 1200 символов", 400);
+    }
+    data.extraProfile = extraProfile;
   }
 
   if (Object.hasOwn(payload, "avatarUrl")) {

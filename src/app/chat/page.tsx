@@ -42,6 +42,7 @@ export default async function ChatPage({
       displayName: true,
       isAdmin: true,
       isVerified: true,
+      isHyperVerified: true,
       sessionVersion: true,
     },
   });
@@ -60,6 +61,7 @@ export default async function ChatPage({
         displayName: currentUser.displayName || currentUser.nickname,
         isAdmin: currentUser.isAdmin,
         isVerified: currentUser.isVerified,
+        isHyperVerified: currentUser.isHyperVerified,
       }}
     />
   );

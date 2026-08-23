@@ -26,6 +26,7 @@ export default async function UserOpenGraphImage({
       avatarUrl: true,
       profileAccent: true,
       isVerified: true,
+      isHyperVerified: true,
       _count: { select: { nfts: true } },
     },
   });
@@ -161,6 +162,26 @@ export default async function UserOpenGraphImage({
                   height: 42,
                   justifyContent: "center",
                   marginLeft: 18,
+                  width: 42,
+                }}
+              >
+                ✓
+              </span>
+            ) : null}
+            {user.isHyperVerified ? (
+              <span
+                style={{
+                  alignItems: "center",
+                  background:
+                    "linear-gradient(135deg, #ff4f86, #ffd34f 24%, #5ee8a1 45%, #55d5ff 64%, #9b78ff 82%, #ff61d8)",
+                  border: "2px solid rgba(255,255,255,.8)",
+                  borderRadius: 999,
+                  boxShadow: "0 0 18px rgba(222,95,255,.72)",
+                  display: "flex",
+                  fontSize: 24,
+                  height: 42,
+                  justifyContent: "center",
+                  marginLeft: 14,
                   width: 42,
                 }}
               >

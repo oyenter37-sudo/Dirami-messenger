@@ -23,7 +23,12 @@ export default async function NftOpenGraphImage({
       imageUrl: true,
       valueRub: true,
       owner: {
-        select: { nickname: true, displayName: true, isVerified: true },
+        select: {
+          nickname: true,
+          displayName: true,
+          isVerified: true,
+          isHyperVerified: true,
+        },
       },
       creator: { select: { nickname: true, displayName: true } },
     },
@@ -168,6 +173,19 @@ export default async function NftOpenGraphImage({
               <span>{ownerName}</span>
               {nft.owner.isVerified ? (
                 <span style={{ color: "#60bfff", marginLeft: 8 }}>✓</span>
+              ) : null}
+              {nft.owner.isHyperVerified ? (
+                <span
+                  style={{
+                    background:
+                      "linear-gradient(90deg, #ff5b87, #ffcf4e, #63eca6, #57d5ff, #ac7dff, #ff66d8)",
+                    backgroundClip: "text",
+                    color: "transparent",
+                    marginLeft: 8,
+                  }}
+                >
+                  ✓
+                </span>
               ) : null}
               <span style={{ color: "rgba(255,255,255,.5)", marginLeft: 10 }}>
                 @{nft.owner.nickname}

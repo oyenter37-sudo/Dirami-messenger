@@ -43,6 +43,15 @@ export function parseBio(value: unknown) {
   return bio;
 }
 
+export function parseExtraProfile(value: unknown) {
+  if (typeof value !== "string") return null;
+  const extraProfile = value.trim();
+  if (extraProfile.length > 1200 || TEXT_CONTROL_RE.test(extraProfile)) {
+    return null;
+  }
+  return extraProfile;
+}
+
 export function parseMessageContent(value: unknown) {
   if (typeof value !== "string") return null;
   const content = value.trim();

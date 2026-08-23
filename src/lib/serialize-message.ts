@@ -16,7 +16,12 @@ export const messageInclude = {
       content: true,
       senderId: true,
       sender: {
-        select: { nickname: true, displayName: true, isVerified: true },
+        select: {
+          nickname: true,
+          displayName: true,
+          isVerified: true,
+          isHyperVerified: true,
+        },
       },
       voice: {
         select: { durationMs: true },
@@ -46,7 +51,12 @@ export type RawMessage = {
     kind: "TEXT" | "VOICE";
     content: string;
     senderId: string;
-    sender: { nickname: string; displayName: string; isVerified: boolean };
+    sender: {
+      nickname: string;
+      displayName: string;
+      isVerified: boolean;
+      isHyperVerified: boolean;
+    };
     voice: { durationMs: number } | null;
   } | null;
   reactions: { emoji: string; userId: string }[];
@@ -87,6 +97,7 @@ export function serializeMessage(message: RawMessage, me: string): ChatMessage {
             message.replyTo.sender.displayName ||
             message.replyTo.sender.nickname,
           isVerified: message.replyTo.sender.isVerified,
+          isHyperVerified: message.replyTo.sender.isHyperVerified,
           voiceDurationMs: message.replyTo.voice?.durationMs ?? null,
         }
       : null,

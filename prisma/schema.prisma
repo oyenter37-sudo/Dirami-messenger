@@ -14,8 +14,10 @@ model User {
   passwordHash      String?
   isAdmin           Boolean            @default(false)
   isVerified        Boolean            @default(false)
+  isHyperVerified   Boolean            @default(false)
   sessionVersion    Int                @default(0)
   bio               String             @default("")
+  extraProfile      String             @default("") @db.VarChar(1200)
   avatarUrl         String             @default("")
   profileAccent     String             @default("#4fbfa8")
   profileBackground String             @default("aurora")

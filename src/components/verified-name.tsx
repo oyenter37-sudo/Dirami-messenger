@@ -3,6 +3,7 @@ import { RichText } from "@/components/rich-text";
 type Props = {
   name: string;
   isVerified?: boolean;
+  isHyperVerified?: boolean;
   className?: string;
   truncate?: boolean;
 };
@@ -10,6 +11,7 @@ type Props = {
 export function VerifiedName({
   name,
   isVerified = false,
+  isHyperVerified = false,
   className = "",
   truncate = false,
 }: Props) {
@@ -22,13 +24,13 @@ export function VerifiedName({
           isVerified
             ? "text-sky-300 [text-shadow:0_0_12px_rgba(56,189,248,.42)]"
             : ""
-        }`}
+        } ${isHyperVerified && !isVerified ? "hyper-verified-name" : ""}`}
       >
         <RichText text={name} />
       </span>
       {isVerified ? (
         <svg
-          aria-label="Верифицированный пользователь"
+          aria-label="Подтверждённый пользователь"
           className="size-[1em] shrink-0 overflow-visible text-sky-400 drop-shadow-[0_0_5px_rgba(56,189,248,.55)]"
           fill="currentColor"
           role="img"
@@ -44,6 +46,16 @@ export function VerifiedName({
             strokeWidth="1.7"
           />
         </svg>
+      ) : null}
+      {isHyperVerified ? (
+        <span
+          aria-label="Гиперподтверждённый пользователь"
+          className="hyper-verified-badge"
+          role="img"
+          title="Гиперподтверждение"
+        >
+          <span aria-hidden="true">✓</span>
+        </span>
       ) : null}
     </span>
   );

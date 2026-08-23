@@ -138,6 +138,7 @@ export function NftDetailsModal({ nftId, onClose, onOpenProfile }: Props) {
                       </span>
                       <VerifiedName
                         className="mt-1 text-sm font-black"
+                        isHyperVerified={givenBy.isHyperVerified}
                         isVerified={givenBy.isVerified}
                         name={givenBy.displayName || givenBy.nickname}
                       />
@@ -166,6 +167,7 @@ export function NftDetailsModal({ nftId, onClose, onOpenProfile }: Props) {
                     </span>
                     <VerifiedName
                       className="mt-1 text-sm font-black"
+                      isHyperVerified={nft.owner.isHyperVerified}
                       isVerified={nft.owner.isVerified}
                       name={nft.owner.displayName || nft.owner.nickname}
                     />
@@ -180,6 +182,7 @@ export function NftDetailsModal({ nftId, onClose, onOpenProfile }: Props) {
                   {nft.creator ? (
                     <VerifiedName
                       className="mt-1 text-sm font-black"
+                      isHyperVerified={nft.creator.isHyperVerified}
                       isVerified={nft.creator.isVerified}
                       name={nft.creator.displayName || nft.creator.nickname}
                     />

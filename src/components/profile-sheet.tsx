@@ -28,7 +28,9 @@ type Props = {
     | "nickname"
     | "displayName"
     | "isVerified"
+    | "isHyperVerified"
     | "bio"
+    | "extraProfile"
     | "avatarUrl"
     | "profileAccent"
     | "profileBackground"
@@ -68,7 +70,9 @@ export function ProfileSheet({
           nickname: fallback.nickname,
           displayName: fallback.displayName,
           isVerified: fallback.isVerified,
+          isHyperVerified: fallback.isHyperVerified,
           bio: fallback.bio,
+          extraProfile: fallback.extraProfile,
           avatarUrl: fallback.avatarUrl,
           profileAccent: fallback.profileAccent,
           profileBackground: fallback.profileBackground,
@@ -131,7 +135,10 @@ export function ProfileSheet({
   const nickname = user?.nickname ?? fallback?.nickname ?? "…";
   const displayName = user?.displayName || fallback?.displayName || nickname;
   const isVerified = user?.isVerified ?? fallback?.isVerified ?? false;
+  const isHyperVerified =
+    user?.isHyperVerified ?? fallback?.isHyperVerified ?? false;
   const bio = user?.bio ?? fallback?.bio ?? "";
+  const extraProfile = user?.extraProfile ?? fallback?.extraProfile ?? "";
   const avatarUrl = user?.avatarUrl ?? fallback?.avatarUrl ?? "";
   const accent = normalizeProfileAccent(
     user?.profileAccent ?? fallback?.profileAccent,
@@ -277,6 +284,7 @@ export function ProfileSheet({
               <div className="min-w-0">
                 <h1 className="truncate text-[27px] leading-8 font-black tracking-[-0.03em] sm:text-[30px]">
                   <VerifiedName
+                    isHyperVerified={isHyperVerified}
                     isVerified={isVerified}
                     name={displayName}
                     truncate
@@ -318,6 +326,11 @@ export function ProfileSheet({
               <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1.5 text-[11px] text-[var(--muted)]">
                 Публичный профиль
               </span>
+              {isHyperVerified ? (
+                <span className="rounded-full border border-fuchsia-300/20 bg-[linear-gradient(110deg,rgba(244,114,182,.12),rgba(56,189,248,.1),rgba(250,204,21,.1))] px-3 py-1.5 text-[11px] font-extrabold text-fuchsia-100 shadow-[0_0_18px_rgba(217,70,239,.13)]">
+                  Гиперподтверждение
+                </span>
+              ) : null}
             </div>
 
             <section className="mt-6 rounded-[1.6rem] border border-[var(--border)] bg-[var(--panel)] p-4 sm:p-5">
@@ -337,6 +350,27 @@ export function ProfileSheet({
                 )}
               </p>
             </section>
+
+            {isHyperVerified ? (
+              <section className="relative mt-3 overflow-hidden rounded-[1.6rem] border border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(244,114,182,.085),rgba(56,189,248,.07),rgba(250,204,21,.065))] p-4 shadow-[0_18px_50px_-34px_rgba(217,70,239,.7)] sm:p-5">
+                <div className="pointer-events-none absolute -top-16 -right-12 size-40 rounded-full bg-fuchsia-400/10 blur-3xl" />
+                <div className="relative mb-2 flex items-center gap-2">
+                  <VerifiedName isHyperVerified name="" />
+                  <h2 className="text-[11px] font-extrabold tracking-[0.12em] text-fuchsia-100 uppercase">
+                    Дополнительно
+                  </h2>
+                </div>
+                <p
+                  className={`relative whitespace-pre-wrap text-[15px] leading-6 ${extraProfile.trim() ? "" : "text-[var(--muted-2)]"}`}
+                >
+                  {extraProfile.trim() ? (
+                    <RichText text={extraProfile} />
+                  ) : (
+                    "В этом особом разделе пока ничего не опубликовано."
+                  )}
+                </p>
+              </section>
+            ) : null}
 
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3.5">

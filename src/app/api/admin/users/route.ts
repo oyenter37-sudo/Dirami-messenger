@@ -29,6 +29,7 @@ export async function GET(request: Request) {
       avatarUrl: true,
       isAdmin: true,
       isVerified: true,
+      isHyperVerified: true,
       createdAt: true,
       limits: true,
     },
