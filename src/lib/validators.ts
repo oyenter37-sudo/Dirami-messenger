@@ -149,6 +149,21 @@ export function parseProfileAccent(value: unknown) {
   return value.toLowerCase();
 }
 
+export function parseHyperBadgeStyle(value: unknown) {
+  return value === "special" || value === "hidden" || value === "classic"
+    ? value
+    : null;
+}
+
+export function parseHyperNameStyle(value: unknown) {
+  return value === "rainbow" ||
+    value === "plain" ||
+    value === "verified" ||
+    value === "custom"
+    ? value
+    : null;
+}
+
 export function parseProfileBackground(value: unknown) {
   if (typeof value !== "string" || !isProfileBackground(value)) return null;
   return value;

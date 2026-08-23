@@ -56,6 +56,11 @@ export async function GET(request: Request) {
         displayName: true,
         isVerified: true,
         isHyperVerified: true,
+        hyperBadgeStyle: true,
+        hyperBadgeColor: true,
+        hyperNameStyle: true,
+        hyperNameColor: true,
+        hyperNameGlow: true,
       },
     }),
     prisma.chat.findUnique({

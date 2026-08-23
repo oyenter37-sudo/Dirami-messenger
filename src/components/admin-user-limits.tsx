@@ -17,6 +17,11 @@ type AdminUser = {
   isAdmin: boolean;
   isVerified: boolean;
   isHyperVerified: boolean;
+  hyperBadgeStyle: string;
+  hyperBadgeColor: string;
+  hyperNameStyle: string;
+  hyperNameColor: string;
+  hyperNameGlow: string;
   createdAt: string;
   limits: UserLimits;
 };
@@ -123,6 +128,11 @@ export function AdminUserLimits() {
             userId: data.user.id,
             isVerified: data.user.isVerified,
             isHyperVerified: data.user.isHyperVerified,
+            hyperBadgeStyle: data.user.hyperBadgeStyle,
+            hyperBadgeColor: data.user.hyperBadgeColor,
+            hyperNameStyle: data.user.hyperNameStyle,
+            hyperNameColor: data.user.hyperNameColor,
+            hyperNameGlow: data.user.hyperNameGlow,
           },
         }),
       );
@@ -187,6 +197,7 @@ export function AdminUserLimits() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1 text-sm font-bold">
                     <VerifiedName
+                      hyperAppearance={user}
                       isHyperVerified={user.isHyperVerified}
                       isVerified={user.isVerified}
                       name={user.displayName || user.nickname}

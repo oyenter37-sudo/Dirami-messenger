@@ -43,6 +43,11 @@ export default async function ChatPage({
       isAdmin: true,
       isVerified: true,
       isHyperVerified: true,
+      hyperBadgeStyle: true,
+      hyperBadgeColor: true,
+      hyperNameStyle: true,
+      hyperNameColor: true,
+      hyperNameGlow: true,
       sessionVersion: true,
     },
   });
@@ -62,6 +67,11 @@ export default async function ChatPage({
         isAdmin: currentUser.isAdmin,
         isVerified: currentUser.isVerified,
         isHyperVerified: currentUser.isHyperVerified,
+        hyperBadgeStyle: currentUser.hyperBadgeStyle,
+        hyperBadgeColor: currentUser.hyperBadgeColor,
+        hyperNameStyle: currentUser.hyperNameStyle,
+        hyperNameColor: currentUser.hyperNameColor,
+        hyperNameGlow: currentUser.hyperNameGlow,
       }}
     />
   );

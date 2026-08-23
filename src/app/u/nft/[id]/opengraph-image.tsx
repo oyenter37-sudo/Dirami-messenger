@@ -28,6 +28,11 @@ export default async function NftOpenGraphImage({
           displayName: true,
           isVerified: true,
           isHyperVerified: true,
+          hyperBadgeStyle: true,
+          hyperBadgeColor: true,
+          hyperNameStyle: true,
+          hyperNameColor: true,
+          hyperNameGlow: true,
         },
       },
       creator: { select: { nickname: true, displayName: true } },
@@ -36,6 +41,27 @@ export default async function NftOpenGraphImage({
   if (!nft) notFound();
 
   const ownerName = nft.owner.displayName || nft.owner.nickname;
+  const ownerHyperBadgeStyle =
+    nft.owner.hyperBadgeStyle === "hidden" ||
+    nft.owner.hyperBadgeStyle === "classic"
+      ? nft.owner.hyperBadgeStyle
+      : "special";
+  const showOwnerHyperBadge =
+    nft.owner.isHyperVerified && ownerHyperBadgeStyle !== "hidden";
+  const ownerBadgeColor = /^#[0-9a-f]{6}$/i.test(nft.owner.hyperBadgeColor)
+    ? nft.owner.hyperBadgeColor
+    : "#a855f7";
+  const ownerNameColor = /^#[0-9a-f]{6}$/i.test(nft.owner.hyperNameColor)
+    ? nft.owner.hyperNameColor
+    : "#f8fafc";
+  const ownerGlowColor = /^#[0-9a-f]{6}$/i.test(nft.owner.hyperNameGlow)
+    ? nft.owner.hyperNameGlow
+    : "#a855f7";
+  const ownerNameStyle = ["plain", "verified", "custom"].includes(
+    nft.owner.hyperNameStyle,
+  )
+    ? nft.owner.hyperNameStyle
+    : "rainbow";
 
   return new ImageResponse(
     <div
@@ -170,17 +196,47 @@ export default async function NftOpenGraphImage({
                 marginTop: 5,
               }}
             >
-              <span>{ownerName}</span>
+              <span
+                style={
+                  nft.owner.isHyperVerified
+                    ? ownerNameStyle === "rainbow"
+                      ? {
+                          background:
+                            "linear-gradient(90deg, #ff5b87, #ffcf4e, #63eca6, #57d5ff, #ac7dff, #ff66d8)",
+                          backgroundClip: "text",
+                          color: "transparent",
+                        }
+                      : ownerNameStyle === "verified"
+                        ? { color: "#7dd3fc" }
+                        : ownerNameStyle === "custom"
+                          ? {
+                              color: ownerNameColor,
+                              textShadow: `0 0 10px ${ownerGlowColor}`,
+                            }
+                          : undefined
+                    : nft.owner.isVerified
+                      ? { color: "#7dd3fc" }
+                      : undefined
+                }
+              >
+                {ownerName}
+              </span>
               {nft.owner.isVerified ? (
                 <span style={{ color: "#60bfff", marginLeft: 8 }}>✓</span>
               ) : null}
-              {nft.owner.isHyperVerified ? (
+              {showOwnerHyperBadge ? (
                 <span
                   style={{
                     background:
-                      "linear-gradient(90deg, #ff5b87, #ffcf4e, #63eca6, #57d5ff, #ac7dff, #ff66d8)",
-                    backgroundClip: "text",
-                    color: "transparent",
+                      ownerHyperBadgeStyle === "classic"
+                        ? undefined
+                        : "linear-gradient(90deg, #ff5b87, #ffcf4e, #63eca6, #57d5ff, #ac7dff, #ff66d8)",
+                    backgroundClip:
+                      ownerHyperBadgeStyle === "classic" ? undefined : "text",
+                    color:
+                      ownerHyperBadgeStyle === "classic"
+                        ? ownerBadgeColor
+                        : "transparent",
                     marginLeft: 8,
                   }}
                 >

@@ -15,6 +15,11 @@ const userSelect = {
   displayName: true,
   isVerified: true,
   isHyperVerified: true,
+  hyperBadgeStyle: true,
+  hyperBadgeColor: true,
+  hyperNameStyle: true,
+  hyperNameColor: true,
+  hyperNameGlow: true,
 } as const;
 
 const nftSelect = {

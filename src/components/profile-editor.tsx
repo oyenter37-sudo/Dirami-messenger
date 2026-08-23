@@ -10,7 +10,7 @@ import {
   normalizeProfileBackground,
   profileBackgroundCss,
 } from "@/lib/profile-customization";
-import type { PublicUser } from "@/lib/types";
+import type { HyperBadgeStyle, HyperNameStyle, PublicUser } from "@/lib/types";
 
 type Props = {
   user: PublicUser;
@@ -18,9 +18,72 @@ type Props = {
   onSaved: (user: PublicUser) => void;
 };
 
+const BADGE_OPTIONS: {
+  id: HyperBadgeStyle;
+  title: string;
+  hint: string;
+}[] = [
+  {
+    id: "special",
+    title: "Специальная галочка",
+    hint: "Радужная анимированная гипергалочка",
+  },
+  {
+    id: "hidden",
+    title: "Не показывать",
+    hint: "Статус и возможности останутся, галочка будет скрыта",
+  },
+  {
+    id: "classic",
+    title: "Обычная галочка",
+    hint: "Классическая форма с вашим цветом",
+  },
+];
+
+const NAME_OPTIONS: {
+  id: HyperNameStyle;
+  title: string;
+  hint: string;
+}[] = [
+  { id: "rainbow", title: "Радужное", hint: "Переливающийся цвет" },
+  { id: "plain", title: "Обычное", hint: "Без особой подсветки" },
+  {
+    id: "verified",
+    title: "Как при подтверждении",
+    hint: "Синий цвет и мягкое синее свечение",
+  },
+  { id: "custom", title: "Свои цвета", hint: "Цвет имени и свечения" },
+];
+
+function initialBadgeStyle(value: string): HyperBadgeStyle {
+  return value === "hidden" || value === "classic" ? value : "special";
+}
+
+function initialNameStyle(value: string): HyperNameStyle {
+  if (value === "plain" || value === "verified" || value === "custom") {
+    return value;
+  }
+  return "rainbow";
+}
+
 export function ProfileEditor({ user, onClose, onSaved }: Props) {
   const [bio, setBio] = useState(user.bio);
   const [extraProfile, setExtraProfile] = useState(user.extraProfile);
+  const [hyperBadgeStyle, setHyperBadgeStyle] = useState<HyperBadgeStyle>(
+    initialBadgeStyle(user.hyperBadgeStyle),
+  );
+  const [hyperBadgeColor, setHyperBadgeColor] = useState(
+    user.hyperBadgeColor || "#a855f7",
+  );
+  const [hyperNameStyle, setHyperNameStyle] = useState<HyperNameStyle>(
+    initialNameStyle(user.hyperNameStyle),
+  );
+  const [hyperNameColor, setHyperNameColor] = useState(
+    user.hyperNameColor || "#f8fafc",
+  );
+  const [hyperNameGlow, setHyperNameGlow] = useState(
+    user.hyperNameGlow || "#a855f7",
+  );
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
   const [accent, setAccent] = useState(
     normalizeProfileAccent(user.profileAccent),
@@ -30,6 +93,13 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const hyperAppearance = {
+    hyperBadgeStyle,
+    hyperBadgeColor,
+    hyperNameStyle,
+    hyperNameColor,
+    hyperNameGlow,
+  };
 
   async function save() {
     if (saving) return;
@@ -41,7 +111,12 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           bio,
-          ...(user.isHyperVerified ? { extraProfile } : {}),
+          ...(user.isHyperVerified
+            ? {
+                extraProfile,
+                ...hyperAppearance,
+              }
+            : {}),
           avatarUrl,
           profileAccent: accent,
           profileBackground: background,
@@ -55,6 +130,11 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
         setError(data.error ?? "Не удалось сохранить профиль");
         return;
       }
+      window.dispatchEvent(
+        new CustomEvent("dirami-verification-changed", {
+          detail: { ...data.user, userId: data.user.id },
+        }),
+      );
       onSaved(data.user);
     } catch {
       setError("Сеть недоступна");
@@ -108,8 +188,9 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
                 nickname={user.displayName || user.nickname}
               />
               <div className="min-w-0 pb-1 text-white">
-                <p className="truncate text-lg font-extrabold">
+                <p className="min-w-0 text-lg font-extrabold">
                   <VerifiedName
+                    hyperAppearance={hyperAppearance}
                     isHyperVerified={user.isHyperVerified}
                     isVerified={user.isVerified}
                     name={user.displayName || user.nickname}
@@ -173,13 +254,173 @@ export function ProfileEditor({ user, onClose, onSaved }: Props) {
           </section>
 
           {user.isHyperVerified ? (
+            <section className="relative mt-6 overflow-hidden rounded-[1.6rem] border border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(244,114,182,.09),rgba(56,189,248,.065),rgba(250,204,21,.06))] p-4">
+              <div className="pointer-events-none absolute -top-16 -right-10 size-36 rounded-full bg-fuchsia-400/12 blur-3xl" />
+              <div className="relative flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-extrabold">
+                    Вид гиперподтверждения
+                  </p>
+                  <p className="mt-1 text-[11px] leading-5 text-[var(--muted-2)]">
+                    Настройте галочку, цвет имени и его свечение
+                  </p>
+                </div>
+                <VerifiedName
+                  hyperAppearance={hyperAppearance}
+                  isHyperVerified
+                  name="Пример"
+                />
+              </div>
+
+              <p className="relative mt-5 mb-2 text-[10px] font-black tracking-[0.12em] text-fuchsia-100/70 uppercase">
+                Как показывать гиперподтверждение
+              </p>
+              <div className="relative grid gap-2">
+                {BADGE_OPTIONS.map((option) => {
+                  const active = hyperBadgeStyle === option.id;
+                  return (
+                    <button
+                      className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition ${
+                        active
+                          ? "border-fuchsia-300/35 bg-fuchsia-300/10"
+                          : "border-white/8 bg-black/10 hover:bg-white/5"
+                      }`}
+                      key={option.id}
+                      onClick={() => setHyperBadgeStyle(option.id)}
+                      type="button"
+                    >
+                      <span
+                        className={`grid size-5 shrink-0 place-items-center rounded-full border ${
+                          active
+                            ? "border-fuchsia-200 bg-fuchsia-300 text-[var(--bg)]"
+                            : "border-white/20"
+                        }`}
+                      >
+                        {active ? "✓" : ""}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-extrabold">
+                          {option.title}
+                        </span>
+                        <span className="mt-0.5 block text-[10px] leading-4 text-[var(--muted-2)]">
+                          {option.hint}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {hyperBadgeStyle === "classic" ? (
+                <label className="relative mt-3 flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/10 px-3 py-2.5">
+                  <span>
+                    <span className="block text-xs font-bold">
+                      Цвет обычной галочки
+                    </span>
+                    <span className="mt-0.5 block font-mono text-[10px] text-[var(--muted-2)]">
+                      {hyperBadgeColor}
+                    </span>
+                  </span>
+                  <span
+                    className="relative grid size-10 cursor-pointer place-items-center overflow-hidden rounded-full border-[3px] border-white/20 shadow-lg"
+                    style={{ background: hyperBadgeColor }}
+                  >
+                    <input
+                      aria-label="Цвет гипергалочки"
+                      className="absolute inset-0 cursor-pointer opacity-0"
+                      onChange={(event) =>
+                        setHyperBadgeColor(event.target.value)
+                      }
+                      type="color"
+                      value={hyperBadgeColor}
+                    />
+                    <span className="font-black text-white drop-shadow">✓</span>
+                  </span>
+                </label>
+              ) : null}
+
+              <p className="relative mt-5 mb-2 text-[10px] font-black tracking-[0.12em] text-cyan-100/70 uppercase">
+                Цвет имени
+              </p>
+              <div className="relative grid grid-cols-2 gap-2">
+                {NAME_OPTIONS.map((option) => {
+                  const active = hyperNameStyle === option.id;
+                  return (
+                    <button
+                      className={`rounded-2xl border px-3 py-2.5 text-left transition ${
+                        active
+                          ? "border-cyan-300/35 bg-cyan-300/9"
+                          : "border-white/8 bg-black/10 hover:bg-white/5"
+                      }`}
+                      key={option.id}
+                      onClick={() => setHyperNameStyle(option.id)}
+                      type="button"
+                    >
+                      <span className="block text-xs font-extrabold">
+                        {option.title}
+                      </span>
+                      <span className="mt-1 block text-[9px] leading-4 text-[var(--muted-2)]">
+                        {option.hint}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {hyperNameStyle === "custom" ? (
+                <div className="relative mt-3 grid grid-cols-2 gap-2">
+                  {[
+                    {
+                      label: "Цвет имени",
+                      value: hyperNameColor,
+                      onChange: setHyperNameColor,
+                    },
+                    {
+                      label: "Цвет свечения",
+                      value: hyperNameGlow,
+                      onChange: setHyperNameGlow,
+                    },
+                  ].map((item) => (
+                    <label
+                      className="flex items-center justify-between gap-2 rounded-2xl border border-white/8 bg-black/10 px-3 py-2.5"
+                      key={item.label}
+                    >
+                      <span className="text-[10px] font-bold leading-4">
+                        {item.label}
+                      </span>
+                      <span
+                        className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-full border-[3px] border-white/20 shadow-lg"
+                        style={{ background: item.value }}
+                      >
+                        <input
+                          aria-label={item.label}
+                          className="absolute inset-0 cursor-pointer opacity-0"
+                          onChange={(event) =>
+                            item.onChange(event.target.value)
+                          }
+                          type="color"
+                          value={item.value}
+                        />
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {user.isHyperVerified ? (
             <section className="relative mt-6 overflow-hidden rounded-[1.5rem] border border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(244,114,182,.08),rgba(56,189,248,.06),rgba(250,204,21,.06))] p-3.5">
               <div className="pointer-events-none absolute -top-10 -right-8 size-28 rounded-full bg-fuchsia-400/10 blur-2xl" />
               <div className="relative mb-2 flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-extrabold">Дополнительно</p>
-                    <VerifiedName isHyperVerified name="" />
+                    <VerifiedName
+                      hyperAppearance={hyperAppearance}
+                      isHyperVerified
+                      name=""
+                    />
                   </div>
                   <p className="mt-0.5 text-[11px] leading-5 text-[var(--muted-2)]">
                     Особый публичный раздел гиперподтверждённого профиля

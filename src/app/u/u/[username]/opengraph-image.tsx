@@ -27,6 +27,11 @@ export default async function UserOpenGraphImage({
       profileAccent: true,
       isVerified: true,
       isHyperVerified: true,
+      hyperBadgeStyle: true,
+      hyperBadgeColor: true,
+      hyperNameStyle: true,
+      hyperNameColor: true,
+      hyperNameGlow: true,
       _count: { select: { nfts: true } },
     },
   });
@@ -35,6 +40,25 @@ export default async function UserOpenGraphImage({
   const name = user.displayName || user.nickname;
   const initials = name.slice(0, 2).toUpperCase();
   const accent = user.profileAccent || "#4fbfa8";
+  const hyperBadgeStyle =
+    user.hyperBadgeStyle === "hidden" || user.hyperBadgeStyle === "classic"
+      ? user.hyperBadgeStyle
+      : "special";
+  const hyperNameStyle = ["plain", "verified", "custom"].includes(
+    user.hyperNameStyle,
+  )
+    ? user.hyperNameStyle
+    : "rainbow";
+  const hyperBadgeColor = /^#[0-9a-f]{6}$/i.test(user.hyperBadgeColor)
+    ? user.hyperBadgeColor
+    : "#a855f7";
+  const hyperNameColor = /^#[0-9a-f]{6}$/i.test(user.hyperNameColor)
+    ? user.hyperNameColor
+    : "#f8fafc";
+  const hyperNameGlow = /^#[0-9a-f]{6}$/i.test(user.hyperNameGlow)
+    ? user.hyperNameGlow
+    : "#a855f7";
+  const showHyperBadge = user.isHyperVerified && hyperBadgeStyle !== "hidden";
 
   return new ImageResponse(
     <div
@@ -150,7 +174,37 @@ export default async function UserOpenGraphImage({
               whiteSpace: "nowrap",
             }}
           >
-            <span>{name}</span>
+            <span
+              style={
+                user.isHyperVerified
+                  ? hyperNameStyle === "rainbow"
+                    ? {
+                        background:
+                          "linear-gradient(90deg, #ff5b87, #ffcf4e, #63eca6, #57d5ff, #ac7dff, #ff66d8)",
+                        backgroundClip: "text",
+                        color: "transparent",
+                      }
+                    : hyperNameStyle === "verified"
+                      ? {
+                          color: "#7dd3fc",
+                          textShadow: "0 0 14px rgba(56,189,248,.5)",
+                        }
+                      : hyperNameStyle === "custom"
+                        ? {
+                            color: hyperNameColor,
+                            textShadow: `0 0 14px ${hyperNameGlow}`,
+                          }
+                        : { color: "#f3fffc" }
+                  : user.isVerified
+                    ? {
+                        color: "#7dd3fc",
+                        textShadow: "0 0 14px rgba(56,189,248,.5)",
+                      }
+                    : undefined
+              }
+            >
+              {name}
+            </span>
             {user.isVerified ? (
               <span
                 style={{
@@ -168,12 +222,14 @@ export default async function UserOpenGraphImage({
                 ✓
               </span>
             ) : null}
-            {user.isHyperVerified ? (
+            {showHyperBadge ? (
               <span
                 style={{
                   alignItems: "center",
                   background:
-                    "linear-gradient(135deg, #ff4f86, #ffd34f 24%, #5ee8a1 45%, #55d5ff 64%, #9b78ff 82%, #ff61d8)",
+                    hyperBadgeStyle === "classic"
+                      ? hyperBadgeColor
+                      : "linear-gradient(135deg, #ff4f86, #ffd34f 24%, #5ee8a1 45%, #55d5ff 64%, #9b78ff 82%, #ff61d8)",
                   border: "2px solid rgba(255,255,255,.8)",
                   borderRadius: 999,
                   boxShadow: "0 0 18px rgba(222,95,255,.72)",

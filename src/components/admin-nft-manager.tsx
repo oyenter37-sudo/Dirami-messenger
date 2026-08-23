@@ -9,6 +9,11 @@ type AdminNftUser = {
   displayName: string;
   isVerified: boolean;
   isHyperVerified: boolean;
+  hyperBadgeStyle: string;
+  hyperBadgeColor: string;
+  hyperNameStyle: string;
+  hyperNameColor: string;
+  hyperNameGlow: string;
 };
 
 type AdminNft = {
@@ -409,6 +414,7 @@ export function AdminNftManager() {
                           <span className="min-w-0">
                             <VerifiedName
                               className="text-sm font-bold"
+                              hyperAppearance={user}
                               isHyperVerified={user.isHyperVerified}
                               isVerified={user.isVerified}
                               name={ownerLabel(user)}

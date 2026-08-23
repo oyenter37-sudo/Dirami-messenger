@@ -1,3 +1,14 @@
+export type HyperBadgeStyle = "special" | "hidden" | "classic";
+export type HyperNameStyle = "rainbow" | "plain" | "verified" | "custom";
+
+export type HyperVerificationAppearance = {
+  hyperBadgeStyle: string;
+  hyperBadgeColor: string;
+  hyperNameStyle: string;
+  hyperNameColor: string;
+  hyperNameGlow: string;
+};
+
 export type SessionUser = {
   userId: string;
   nickname: string;
@@ -6,6 +17,11 @@ export type SessionUser = {
   isAdmin?: boolean;
   isVerified?: boolean;
   isHyperVerified?: boolean;
+  hyperBadgeStyle?: string;
+  hyperBadgeColor?: string;
+  hyperNameStyle?: string;
+  hyperNameColor?: string;
+  hyperNameGlow?: string;
 };
 
 export type NftItem = {
@@ -24,7 +40,7 @@ export type NftDetails = NftItem & {
   receivedFrom: NftPerson | null;
 };
 
-export type NftPerson = {
+export type NftPerson = HyperVerificationAppearance & {
   id: string;
   nickname: string;
   displayName: string;
@@ -38,7 +54,7 @@ export type NewsItem = {
   content: string;
   createdAt: string;
   unread: boolean;
-  author: {
+  author: HyperVerificationAppearance & {
     nickname: string;
     displayName: string;
     isVerified: boolean;
@@ -46,7 +62,7 @@ export type NewsItem = {
   };
 };
 
-export type PublicUser = {
+export type PublicUser = HyperVerificationAppearance & {
   id: string;
   nickname: string;
   displayName: string;
@@ -100,16 +116,18 @@ export type ChatMessage = {
   senderId: string;
   receiverId: string;
   voice: VoiceMessageMeta | null;
-  replyTo: {
-    id: string;
-    kind: "text" | "voice";
-    content: string;
-    senderId: string;
-    nickname: string;
-    isVerified: boolean;
-    isHyperVerified: boolean;
-    voiceDurationMs: number | null;
-  } | null;
+  replyTo:
+    | (HyperVerificationAppearance & {
+        id: string;
+        kind: "text" | "voice";
+        content: string;
+        senderId: string;
+        nickname: string;
+        isVerified: boolean;
+        isHyperVerified: boolean;
+        voiceDurationMs: number | null;
+      })
+    | null;
   reactions: {
     emoji: string;
     count: number;

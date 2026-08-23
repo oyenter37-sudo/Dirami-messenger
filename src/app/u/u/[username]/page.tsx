@@ -27,12 +27,19 @@ export async function generateMetadata({
       bio: true,
       isVerified: true,
       isHyperVerified: true,
+      hyperBadgeStyle: true,
+      hyperBadgeColor: true,
+      hyperNameStyle: true,
+      hyperNameColor: true,
+      hyperNameGlow: true,
     },
   });
   if (!user) return { title: "Профиль не найден" };
 
   const name = user.displayName || user.nickname;
-  const title = `${name}${user.isVerified ? " ✓" : ""}${user.isHyperVerified ? " ✦" : ""} (@${user.nickname})`;
+  const showHyperBadge =
+    user.isHyperVerified && user.hyperBadgeStyle !== "hidden";
+  const title = `${name}${user.isVerified ? " ✓" : ""}${showHyperBadge ? " ✦" : ""} (@${user.nickname})`;
   const description =
     user.bio || `Публичный профиль @${user.nickname} в мессенджере Dirami`;
   const path = userPublicPath(user.nickname);
@@ -85,6 +92,11 @@ export default async function UserLinkPage({ params }: PageProps) {
         profileBackground: true,
         isVerified: true,
         isHyperVerified: true,
+        hyperBadgeStyle: true,
+        hyperBadgeColor: true,
+        hyperNameStyle: true,
+        hyperNameColor: true,
+        hyperNameGlow: true,
       },
     }),
   ]);

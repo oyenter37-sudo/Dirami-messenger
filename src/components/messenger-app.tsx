@@ -27,6 +27,8 @@ import type {
   ChatMessage,
   ChatPreview,
   ChatState,
+  HyperVerificationAppearance,
+  PublicUser,
   SessionUser,
   UserSearchResult,
 } from "@/lib/types";
@@ -105,7 +107,7 @@ type SidebarItem = UserSearchResult & {
   unread: number;
 };
 
-type VerificationChangedDetail = {
+type VerificationChangedDetail = Partial<HyperVerificationAppearance> & {
   userId: string;
   isVerified: boolean;
   isHyperVerified: boolean;
@@ -134,6 +136,15 @@ export function MessengerApp({
   const [myIsHyperVerified, setMyIsHyperVerified] = useState(
     Boolean(me.isHyperVerified),
   );
+  const [myHyperAppearance, setMyHyperAppearance] = useState<
+    Partial<HyperVerificationAppearance>
+  >({
+    hyperBadgeStyle: me.hyperBadgeStyle,
+    hyperBadgeColor: me.hyperBadgeColor,
+    hyperNameStyle: me.hyperNameStyle,
+    hyperNameColor: me.hyperNameColor,
+    hyperNameGlow: me.hyperNameGlow,
+  });
   const [profileId, setProfileId] = useState<string | null>(
     initialProfileId ?? null,
   );
@@ -147,10 +158,11 @@ export function MessengerApp({
   const currentMe = useMemo<SessionUser>(
     () => ({
       ...me,
+      ...myHyperAppearance,
       isVerified: myIsVerified,
       isHyperVerified: myIsHyperVerified,
     }),
-    [me, myIsHyperVerified, myIsVerified],
+    [me, myHyperAppearance, myIsHyperVerified, myIsVerified],
   );
 
   const sidebarItems = useMemo<SidebarItem[]>(() => {
@@ -254,6 +266,24 @@ export function MessengerApp({
       if (!detail || detail.userId !== me.userId) return;
       setMyIsVerified(detail.isVerified);
       setMyIsHyperVerified(detail.isHyperVerified);
+      setMyHyperAppearance((current) => ({
+        ...current,
+        ...(detail.hyperBadgeStyle
+          ? { hyperBadgeStyle: detail.hyperBadgeStyle }
+          : {}),
+        ...(detail.hyperBadgeColor
+          ? { hyperBadgeColor: detail.hyperBadgeColor }
+          : {}),
+        ...(detail.hyperNameStyle
+          ? { hyperNameStyle: detail.hyperNameStyle }
+          : {}),
+        ...(detail.hyperNameColor
+          ? { hyperNameColor: detail.hyperNameColor }
+          : {}),
+        ...(detail.hyperNameGlow
+          ? { hyperNameGlow: detail.hyperNameGlow }
+          : {}),
+      }));
     };
 
     window.addEventListener("dirami-verification-changed", updateVerification);
@@ -477,8 +507,9 @@ export function MessengerApp({
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 truncate text-sm font-medium">
+                        <span className="min-w-0 text-sm font-medium">
                           <VerifiedName
+                            hyperAppearance={item.user}
                             isHyperVerified={item.user.isHyperVerified}
                             isVerified={item.user.isVerified}
                             name={item.user.displayName || item.user.nickname}
@@ -559,6 +590,7 @@ export function MessengerApp({
       {accountOpen ? (
         <AccountDrawer
           displayName={me.displayName}
+          hyperAppearance={currentMe}
           isHyperVerified={myIsHyperVerified}
           isVerified={myIsVerified}
           newsUnread={newsUnread}
@@ -600,6 +632,7 @@ export function MessengerApp({
       ) : null}
       {settingsOpen ? (
         <SettingsPanel
+          hyperAppearance={currentMe}
           isAdmin={Boolean(me.isAdmin)}
           isHyperVerified={myIsHyperVerified}
           isVerified={myIsVerified}
@@ -653,14 +686,7 @@ function Conversation({
   onOpenProfile,
 }: {
   me: SessionUser;
-  peer: {
-    id: string;
-    nickname: string;
-    displayName: string;
-    isVerified: boolean;
-    isHyperVerified: boolean;
-    avatarUrl: string;
-  };
+  peer: PublicUser;
   initialState: ChatState;
   onBack: () => void;
   onAuthLost: () => void;
@@ -1007,8 +1033,9 @@ function Conversation({
             nickname={peerName}
           />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">
+            <p className="min-w-0 text-sm font-semibold">
               <VerifiedName
+                hyperAppearance={peer}
                 isHyperVerified={peer.isHyperVerified}
                 isVerified={peer.isVerified}
                 name={peerName}
@@ -1107,6 +1134,7 @@ function Conversation({
                       >
                         <p className="text-[11px] font-bold">
                           <VerifiedName
+                            hyperAppearance={message.replyTo}
                             isHyperVerified={message.replyTo.isHyperVerified}
                             isVerified={message.replyTo.isVerified}
                             name={message.replyTo.nickname}

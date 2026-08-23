@@ -8,12 +8,14 @@ import { BackupPasswordSettings } from "@/components/backup-password-settings";
 import { GoogleAccountSettings } from "@/components/google-account-settings";
 import { VerifiedName } from "@/components/verified-name";
 import { applyTheme, readTheme, THEMES, type ThemeId } from "@/lib/theme";
+import type { HyperVerificationAppearance } from "@/lib/types";
 
 type Props = {
   nickname: string;
   isAdmin: boolean;
   isVerified: boolean;
   isHyperVerified: boolean;
+  hyperAppearance?: Partial<HyperVerificationAppearance>;
   onClose: () => void;
 };
 
@@ -22,6 +24,7 @@ export function SettingsPanel({
   isAdmin,
   isVerified,
   isHyperVerified,
+  hyperAppearance,
   onClose,
 }: Props) {
   const [theme, setTheme] = useState<ThemeId>(readTheme);
@@ -89,6 +92,7 @@ export function SettingsPanel({
             <p className="text-[17px] font-bold">Настройки</p>
             <p className="text-xs text-[var(--muted-2)]">
               <VerifiedName
+                hyperAppearance={hyperAppearance}
                 isHyperVerified={isHyperVerified}
                 isVerified={isVerified}
                 name={nickname}

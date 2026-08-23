@@ -8,12 +8,14 @@ import {
 import { RichText } from "@/components/rich-text";
 import { UserAvatar } from "@/components/user-avatar";
 import { VerifiedName } from "@/components/verified-name";
+import type { HyperVerificationAppearance } from "@/lib/types";
 
 type Props = {
   nickname: string;
   displayName?: string;
   isVerified?: boolean;
   isHyperVerified?: boolean;
+  hyperAppearance?: Partial<HyperVerificationAppearance>;
   onClose: () => void;
   newsUnread: number;
   onOpenProfile: () => void;
@@ -159,6 +161,7 @@ export function AccountDrawer({
   displayName,
   isVerified,
   isHyperVerified,
+  hyperAppearance,
   newsUnread,
   onClose,
   onOpenProfile,
@@ -182,6 +185,9 @@ export function AccountDrawer({
   const [currentHyperVerified, setCurrentHyperVerified] = useState(
     Boolean(isHyperVerified),
   );
+  const [currentHyperAppearance, setCurrentHyperAppearance] = useState<
+    Partial<HyperVerificationAppearance>
+  >(hyperAppearance ?? {});
 
   useEffect(() => {
     let cancelled = false;
@@ -194,6 +200,11 @@ export function AccountDrawer({
             displayName?: string;
             isVerified?: boolean;
             isHyperVerified?: boolean;
+            hyperBadgeStyle?: string;
+            hyperBadgeColor?: string;
+            hyperNameStyle?: string;
+            hyperNameColor?: string;
+            hyperNameGlow?: string;
           };
         }) => {
           if (!cancelled) {
@@ -205,6 +216,18 @@ export function AccountDrawer({
             setCurrentHyperVerified(
               Boolean(data.user?.isHyperVerified ?? isHyperVerified),
             );
+            setCurrentHyperAppearance({
+              hyperBadgeStyle:
+                data.user?.hyperBadgeStyle ?? hyperAppearance?.hyperBadgeStyle,
+              hyperBadgeColor:
+                data.user?.hyperBadgeColor ?? hyperAppearance?.hyperBadgeColor,
+              hyperNameStyle:
+                data.user?.hyperNameStyle ?? hyperAppearance?.hyperNameStyle,
+              hyperNameColor:
+                data.user?.hyperNameColor ?? hyperAppearance?.hyperNameColor,
+              hyperNameGlow:
+                data.user?.hyperNameGlow ?? hyperAppearance?.hyperNameGlow,
+            });
           }
         },
       )
@@ -212,7 +235,7 @@ export function AccountDrawer({
     return () => {
       cancelled = true;
     };
-  }, [displayName, isHyperVerified, isVerified, nickname]);
+  }, [displayName, hyperAppearance, isHyperVerified, isVerified, nickname]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -301,8 +324,9 @@ export function AccountDrawer({
               nickname={currentDisplayName}
             />
             <div className="min-w-0">
-              <p className="truncate text-sm font-extrabold">
+              <p className="min-w-0 text-sm font-extrabold">
                 <VerifiedName
+                  hyperAppearance={currentHyperAppearance}
                   isHyperVerified={currentHyperVerified}
                   isVerified={currentVerified}
                   name={currentDisplayName}

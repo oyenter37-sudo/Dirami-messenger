@@ -17,6 +17,11 @@ type ProfilePreview = Pick<
   | "profileBackground"
   | "isVerified"
   | "isHyperVerified"
+  | "hyperBadgeStyle"
+  | "hyperBadgeColor"
+  | "hyperNameStyle"
+  | "hyperNameColor"
+  | "hyperNameGlow"
 >;
 
 function PublicBackdrop() {

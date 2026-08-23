@@ -29,6 +29,11 @@ type Props = {
     | "displayName"
     | "isVerified"
     | "isHyperVerified"
+    | "hyperBadgeStyle"
+    | "hyperBadgeColor"
+    | "hyperNameStyle"
+    | "hyperNameColor"
+    | "hyperNameGlow"
     | "bio"
     | "extraProfile"
     | "avatarUrl"
@@ -71,6 +76,11 @@ export function ProfileSheet({
           displayName: fallback.displayName,
           isVerified: fallback.isVerified,
           isHyperVerified: fallback.isHyperVerified,
+          hyperBadgeStyle: fallback.hyperBadgeStyle,
+          hyperBadgeColor: fallback.hyperBadgeColor,
+          hyperNameStyle: fallback.hyperNameStyle,
+          hyperNameColor: fallback.hyperNameColor,
+          hyperNameGlow: fallback.hyperNameGlow,
           bio: fallback.bio,
           extraProfile: fallback.extraProfile,
           avatarUrl: fallback.avatarUrl,
@@ -137,6 +147,7 @@ export function ProfileSheet({
   const isVerified = user?.isVerified ?? fallback?.isVerified ?? false;
   const isHyperVerified =
     user?.isHyperVerified ?? fallback?.isHyperVerified ?? false;
+  const hyperAppearance = user ?? fallback;
   const bio = user?.bio ?? fallback?.bio ?? "";
   const extraProfile = user?.extraProfile ?? fallback?.extraProfile ?? "";
   const avatarUrl = user?.avatarUrl ?? fallback?.avatarUrl ?? "";
@@ -282,8 +293,9 @@ export function ProfileSheet({
           <main className="px-5 pt-16 pb-9 sm:px-7 sm:pt-20">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h1 className="truncate text-[27px] leading-8 font-black tracking-[-0.03em] sm:text-[30px]">
+                <h1 className="min-w-0 text-[27px] leading-8 font-black tracking-[-0.03em] sm:text-[30px]">
                   <VerifiedName
+                    hyperAppearance={hyperAppearance}
                     isHyperVerified={isHyperVerified}
                     isVerified={isVerified}
                     name={displayName}
@@ -294,9 +306,6 @@ export function ProfileSheet({
                   @{nickname}
                 </p>
               </div>
-              <span className="profile-accent-soft profile-accent-text mt-1 shrink-0 rounded-full px-3 py-1.5 text-[10px] font-extrabold tracking-wide uppercase">
-                Dirami profile
-              </span>
             </div>
 
             <div className="mt-5 space-y-2">
@@ -326,7 +335,8 @@ export function ProfileSheet({
               <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1.5 text-[11px] text-[var(--muted)]">
                 Публичный профиль
               </span>
-              {isHyperVerified ? (
+              {isHyperVerified &&
+              hyperAppearance?.hyperBadgeStyle !== "hidden" ? (
                 <span className="rounded-full border border-fuchsia-300/20 bg-[linear-gradient(110deg,rgba(244,114,182,.12),rgba(56,189,248,.1),rgba(250,204,21,.1))] px-3 py-1.5 text-[11px] font-extrabold text-fuchsia-100 shadow-[0_0_18px_rgba(217,70,239,.13)]">
                   Гиперподтверждение
                 </span>
@@ -355,7 +365,11 @@ export function ProfileSheet({
               <section className="relative mt-3 overflow-hidden rounded-[1.6rem] border border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(244,114,182,.085),rgba(56,189,248,.07),rgba(250,204,21,.065))] p-4 shadow-[0_18px_50px_-34px_rgba(217,70,239,.7)] sm:p-5">
                 <div className="pointer-events-none absolute -top-16 -right-12 size-40 rounded-full bg-fuchsia-400/10 blur-3xl" />
                 <div className="relative mb-2 flex items-center gap-2">
-                  <VerifiedName isHyperVerified name="" />
+                  <VerifiedName
+                    hyperAppearance={hyperAppearance}
+                    isHyperVerified
+                    name=""
+                  />
                   <h2 className="text-[11px] font-extrabold tracking-[0.12em] text-fuchsia-100 uppercase">
                     Дополнительно
                   </h2>

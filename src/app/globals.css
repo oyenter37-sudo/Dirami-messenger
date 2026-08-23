@@ -459,18 +459,29 @@ input:focus {
 }
 
 .verified-badges {
+  position: relative;
+  z-index: 40;
   display: inline-flex;
   min-width: max-content;
   flex: 0 0 auto;
   align-items: center;
   gap: 0.25em;
-  margin-block: -0.24em;
-  padding: 0.24em 0.48em 0.24em 0.08em;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.verification-icon {
+  position: relative;
+  z-index: 41;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
   overflow: visible;
 }
 
 .hyper-verified-badge {
   position: relative;
+  z-index: 42;
   isolation: isolate;
   display: inline-flex;
   width: 1.12em;

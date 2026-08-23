@@ -21,6 +21,11 @@ export const messageInclude = {
           displayName: true,
           isVerified: true,
           isHyperVerified: true,
+          hyperBadgeStyle: true,
+          hyperBadgeColor: true,
+          hyperNameStyle: true,
+          hyperNameColor: true,
+          hyperNameGlow: true,
         },
       },
       voice: {
@@ -56,6 +61,11 @@ export type RawMessage = {
       displayName: string;
       isVerified: boolean;
       isHyperVerified: boolean;
+      hyperBadgeStyle: string;
+      hyperBadgeColor: string;
+      hyperNameStyle: string;
+      hyperNameColor: string;
+      hyperNameGlow: string;
     };
     voice: { durationMs: number } | null;
   } | null;
@@ -98,6 +108,11 @@ export function serializeMessage(message: RawMessage, me: string): ChatMessage {
             message.replyTo.sender.nickname,
           isVerified: message.replyTo.sender.isVerified,
           isHyperVerified: message.replyTo.sender.isHyperVerified,
+          hyperBadgeStyle: message.replyTo.sender.hyperBadgeStyle,
+          hyperBadgeColor: message.replyTo.sender.hyperBadgeColor,
+          hyperNameStyle: message.replyTo.sender.hyperNameStyle,
+          hyperNameColor: message.replyTo.sender.hyperNameColor,
+          hyperNameGlow: message.replyTo.sender.hyperNameGlow,
           voiceDurationMs: message.replyTo.voice?.durationMs ?? null,
         }
       : null,

@@ -4,6 +4,8 @@ import { jsonError, requireSession } from "@/lib/api";
 import {
   parseBio,
   parseExtraProfile,
+  parseHyperBadgeStyle,
+  parseHyperNameStyle,
   parseOptionalHttpUrl,
   parseProfileAccent,
   parseProfileBackground,
@@ -26,6 +28,11 @@ const publicProfileSelect = {
   displayName: true,
   isVerified: true,
   isHyperVerified: true,
+  hyperBadgeStyle: true,
+  hyperBadgeColor: true,
+  hyperNameStyle: true,
+  hyperNameColor: true,
+  hyperNameGlow: true,
   bio: true,
   extraProfile: true,
   avatarUrl: true,
@@ -93,6 +100,11 @@ export async function PATCH(request: Request) {
   const payload = body as {
     bio?: unknown;
     extraProfile?: unknown;
+    hyperBadgeStyle?: unknown;
+    hyperBadgeColor?: unknown;
+    hyperNameStyle?: unknown;
+    hyperNameColor?: unknown;
+    hyperNameGlow?: unknown;
     avatarUrl?: unknown;
     profileAccent?: unknown;
     profileBackground?: unknown;
@@ -100,10 +112,37 @@ export async function PATCH(request: Request) {
   const data: {
     bio?: string;
     extraProfile?: string;
+    hyperBadgeStyle?: string;
+    hyperBadgeColor?: string;
+    hyperNameStyle?: string;
+    hyperNameColor?: string;
+    hyperNameGlow?: string;
     avatarUrl?: string;
     profileAccent?: string;
     profileBackground?: string;
   } = {};
+
+  const hyperFields = [
+    "extraProfile",
+    "hyperBadgeStyle",
+    "hyperBadgeColor",
+    "hyperNameStyle",
+    "hyperNameColor",
+    "hyperNameGlow",
+  ] as const;
+  if (hyperFields.some((field) => Object.hasOwn(payload, field))) {
+    const owner = await prisma.user.findUnique({
+      where: { id: auth.session.userId },
+      select: { isHyperVerified: true },
+    });
+    if (!owner) return jsonError("Нужно войти", 401);
+    if (!owner.isHyperVerified) {
+      return jsonError(
+        "Настройки гиперподтверждения доступны только гиперподтверждённым пользователям",
+        403,
+      );
+    }
+  }
 
   if (Object.hasOwn(payload, "bio")) {
     const bio = parseBio(payload.bio);
@@ -112,22 +151,34 @@ export async function PATCH(request: Request) {
   }
 
   if (Object.hasOwn(payload, "extraProfile")) {
-    const owner = await prisma.user.findUnique({
-      where: { id: auth.session.userId },
-      select: { isHyperVerified: true },
-    });
-    if (!owner) return jsonError("Нужно войти", 401);
-    if (!owner.isHyperVerified) {
-      return jsonError(
-        "Раздел «Дополнительно» доступен только гиперподтверждённым пользователям",
-        403,
-      );
-    }
     const extraProfile = parseExtraProfile(payload.extraProfile);
     if (extraProfile === null) {
       return jsonError("Дополнительный текст — до 1200 символов", 400);
     }
     data.extraProfile = extraProfile;
+  }
+
+  if (Object.hasOwn(payload, "hyperBadgeStyle")) {
+    const value = parseHyperBadgeStyle(payload.hyperBadgeStyle);
+    if (!value) return jsonError("Некорректный вид гипергалочки", 400);
+    data.hyperBadgeStyle = value;
+  }
+
+  if (Object.hasOwn(payload, "hyperNameStyle")) {
+    const value = parseHyperNameStyle(payload.hyperNameStyle);
+    if (!value) return jsonError("Некорректный вид имени", 400);
+    data.hyperNameStyle = value;
+  }
+
+  for (const [field, label] of [
+    ["hyperBadgeColor", "цвет гипергалочки"],
+    ["hyperNameColor", "цвет имени"],
+    ["hyperNameGlow", "цвет свечения"],
+  ] as const) {
+    if (!Object.hasOwn(payload, field)) continue;
+    const value = parseProfileAccent(payload[field]);
+    if (!value) return jsonError(`Некорректный ${label}`, 400);
+    data[field] = value;
   }
 
   if (Object.hasOwn(payload, "avatarUrl")) {
