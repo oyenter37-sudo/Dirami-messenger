@@ -109,6 +109,8 @@ type SidebarItem = UserSearchResult & {
 
 type VerificationChangedDetail = Partial<HyperVerificationAppearance> & {
   userId: string;
+  displayName?: string;
+  avatarUrl?: string;
   isVerified: boolean;
   isHyperVerified: boolean;
 };
@@ -132,6 +134,10 @@ export function MessengerApp({
   const [newsUnread, setNewsUnread] = useState(0);
   const [limitsOpen, setLimitsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [myDisplayName, setMyDisplayName] = useState(
+    me.displayName || me.nickname,
+  );
+  const [myAvatarUrl, setMyAvatarUrl] = useState(me.avatarUrl ?? "");
   const [myIsVerified, setMyIsVerified] = useState(Boolean(me.isVerified));
   const [myIsHyperVerified, setMyIsHyperVerified] = useState(
     Boolean(me.isHyperVerified),
@@ -159,10 +165,19 @@ export function MessengerApp({
     () => ({
       ...me,
       ...myHyperAppearance,
+      displayName: myDisplayName,
+      avatarUrl: myAvatarUrl,
       isVerified: myIsVerified,
       isHyperVerified: myIsHyperVerified,
     }),
-    [me, myHyperAppearance, myIsHyperVerified, myIsVerified],
+    [
+      me,
+      myAvatarUrl,
+      myDisplayName,
+      myHyperAppearance,
+      myIsHyperVerified,
+      myIsVerified,
+    ],
   );
 
   const sidebarItems = useMemo<SidebarItem[]>(() => {
@@ -264,6 +279,12 @@ export function MessengerApp({
     const updateVerification = (event: Event) => {
       const detail = (event as CustomEvent<VerificationChangedDetail>).detail;
       if (!detail || detail.userId !== me.userId) return;
+      if (typeof detail.displayName === "string") {
+        setMyDisplayName(detail.displayName || me.nickname);
+      }
+      if (typeof detail.avatarUrl === "string") {
+        setMyAvatarUrl(detail.avatarUrl);
+      }
       setMyIsVerified(detail.isVerified);
       setMyIsHyperVerified(detail.isHyperVerified);
       setMyHyperAppearance((current) => ({
@@ -292,7 +313,7 @@ export function MessengerApp({
         "dirami-verification-changed",
         updateVerification,
       );
-  }, [me.userId]);
+  }, [me.nickname, me.userId]);
 
   useEffect(() => {
     const unlock = () => void unlockMessageSounds();
@@ -425,18 +446,37 @@ export function MessengerApp({
           peerId ? "hidden md:flex" : "flex"
         }`}
       >
-        <header className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3.5">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-2xl bg-accent text-sm font-black text-on-accent shadow-[0_10px_26px_-14px_var(--accent)]">
-              D
+        <header className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-b border-[var(--border)] px-3 py-3.5">
+          <button
+            aria-label="Открыть мой профиль"
+            className="group flex min-w-0 max-w-full items-center gap-2 justify-self-start rounded-2xl p-1 text-left transition hover:bg-white/5"
+            onClick={() => setProfileId(me.userId)}
+            title="Открыть мой профиль"
+            type="button"
+          >
+            <UserAvatar
+              avatarUrl={myAvatarUrl}
+              className="size-9 shrink-0 rounded-full text-xs transition group-hover:brightness-110"
+              nickname={myDisplayName}
+            />
+            <span className="min-w-0 text-xs font-extrabold sm:text-sm">
+              <VerifiedName
+                hyperAppearance={currentMe}
+                isHyperVerified={myIsHyperVerified}
+                isVerified={myIsVerified}
+                name={myDisplayName}
+                truncate
+              />
             </span>
-            <p className="truncate text-[17px] font-extrabold tracking-tight">
-              <RichText text="Dirami" />
-            </p>
-          </div>
+          </button>
+
+          <p className="px-2 text-center text-[17px] font-extrabold tracking-tight">
+            <RichText text="Dirami" />
+          </p>
+
           <button
             aria-label="Открыть меню"
-            className="relative grid size-10 shrink-0 place-items-center rounded-full border border-transparent text-[var(--muted)] transition hover:border-[var(--border)] hover:bg-white/5 hover:text-white"
+            className="relative grid size-10 shrink-0 place-items-center justify-self-end rounded-full border border-transparent text-[var(--muted)] transition hover:border-[var(--border)] hover:bg-white/5 hover:text-white"
             onClick={() => setAccountOpen(true)}
             type="button"
           >
@@ -457,6 +497,15 @@ export function MessengerApp({
             ) : null}
           </button>
         </header>
+
+        <div className="px-3 pt-3">
+          <div className="relative overflow-hidden rounded-2xl border border-[var(--accent)]/20 bg-[linear-gradient(110deg,var(--accent-muted),rgba(255,255,255,.025))] px-4 py-2.5 text-center shadow-[0_12px_30px_-24px_var(--accent)]">
+            <span className="pointer-events-none absolute -top-6 -left-4 size-14 rounded-full bg-[var(--accent)]/10 blur-xl" />
+            <p className="relative text-xs font-bold tracking-[0.01em] text-[var(--muted)]">
+              <RichText text="Dirami v1 – перед вами!" />
+            </p>
+          </div>
+        </div>
 
         <div className="px-3 py-3">
           <input
@@ -589,7 +638,7 @@ export function MessengerApp({
 
       {accountOpen ? (
         <AccountDrawer
-          displayName={me.displayName}
+          displayName={myDisplayName}
           hyperAppearance={currentMe}
           isHyperVerified={myIsHyperVerified}
           isVerified={myIsVerified}
@@ -604,10 +653,6 @@ export function MessengerApp({
           onOpenLimits={() => {
             setAccountOpen(false);
             setLimitsOpen(true);
-          }}
-          onOpenProfile={() => {
-            setAccountOpen(false);
-            setProfileId(me.userId);
           }}
           onOpenSettings={() => {
             setAccountOpen(false);

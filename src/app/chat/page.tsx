@@ -40,6 +40,7 @@ export default async function ChatPage({
     select: {
       nickname: true,
       displayName: true,
+      avatarUrl: true,
       isAdmin: true,
       isVerified: true,
       isHyperVerified: true,
@@ -64,6 +65,7 @@ export default async function ChatPage({
         ...session,
         nickname: currentUser.nickname,
         displayName: currentUser.displayName || currentUser.nickname,
+        avatarUrl: currentUser.avatarUrl,
         isAdmin: currentUser.isAdmin,
         isVerified: currentUser.isVerified,
         isHyperVerified: currentUser.isHyperVerified,

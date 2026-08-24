@@ -18,38 +18,15 @@ type Props = {
   hyperAppearance?: Partial<HyperVerificationAppearance>;
   onClose: () => void;
   newsUnread: number;
-  onOpenProfile: () => void;
   onOpenNews: () => void;
   onOpenSettings: () => void;
   onOpenLimits: () => void;
   onLogout: () => Promise<void>;
 };
 
-type IconName = "profile" | "news" | "settings" | "limits" | "logout";
+type IconName = "news" | "settings" | "limits" | "logout";
 
 function MenuIcon({ name }: { name: IconName }) {
-  if (name === "profile") {
-    return (
-      <svg
-        aria-hidden="true"
-        className="size-5"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <path
-          d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <path
-          d="M4.8 20c.7-3.4 3.1-5.2 7.2-5.2s6.5 1.8 7.2 5.2"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="1.8"
-        />
-      </svg>
-    );
-  }
   if (name === "news") {
     return (
       <svg
@@ -164,7 +141,6 @@ export function AccountDrawer({
   hyperAppearance,
   newsUnread,
   onClose,
-  onOpenProfile,
   onOpenNews,
   onOpenSettings,
   onOpenLimits,
@@ -343,25 +319,6 @@ export function AccountDrawer({
             Аккаунт
           </p>
           <div className="space-y-1.5">
-            <button
-              className="group flex w-full items-center gap-3 rounded-[1.25rem] border border-transparent px-3 py-3 text-left transition hover:border-[var(--border)] hover:bg-[var(--panel)]"
-              onClick={onOpenProfile}
-              type="button"
-            >
-              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent-muted text-accent-soft">
-                <MenuIcon name="profile" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold">Мой профиль</span>
-                <span className="block text-[11px] text-[var(--muted-2)]">
-                  Описание и коллекция NFT
-                </span>
-              </span>
-              <span className="text-lg text-[var(--muted-2)] transition group-hover:translate-x-0.5">
-                ›
-              </span>
-            </button>
-
             <button
               className="group flex w-full items-center gap-3 rounded-[1.25rem] border border-transparent px-3 py-3 text-left transition hover:border-[var(--border)] hover:bg-[var(--panel)]"
               onClick={onOpenNews}

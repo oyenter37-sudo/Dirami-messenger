@@ -14,6 +14,7 @@ export type SessionUser = {
   nickname: string;
   sessionVersion: number;
   displayName?: string;
+  avatarUrl?: string;
   isAdmin?: boolean;
   isVerified?: boolean;
   isHyperVerified?: boolean;
