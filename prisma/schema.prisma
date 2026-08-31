@@ -158,6 +158,9 @@ model Message {
   kind       MessageKind   @default(TEXT)
   content    String
   createdAt  DateTime      @default(now())
+  editedAt   DateTime?
+  deletedAt  DateTime?
+  updatedAt  DateTime      @updatedAt
   readAt     DateTime?
   senderId   String
   receiverId String

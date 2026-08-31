@@ -114,6 +114,9 @@ export type ChatMessage = {
   kind: "text" | "voice";
   content: string;
   createdAt: string;
+  updatedAt: string;
+  editedAt: string | null;
+  deletedAt: string | null;
   senderId: string;
   receiverId: string;
   voice: VoiceMessageMeta | null;

@@ -105,8 +105,8 @@ export async function GET(request: Request) {
         }
       : null;
 
-  // Incremental poll: messages created strictly after the cursor, plus voice
-  // messages whose "listened" state changed after it.
+  // Incremental poll: messages created after the cursor, plus rows that were
+  // edited, deleted or had their voice "listened" state changed after it.
   if (validAfter) {
     const messages = await prisma.message.findMany({
       where: {
@@ -115,6 +115,7 @@ export async function GET(request: Request) {
           {
             OR: [
               { createdAt: { gt: validAfter } },
+              { updatedAt: { gt: validAfter } },
               { voice: { listenedAt: { gt: validAfter } } },
             ],
           },

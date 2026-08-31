@@ -173,6 +173,7 @@ function formatVoiceDuration(durationMs: number | null) {
 
 function messagePreview(message: ChatPreview["lastMessage"]) {
   if (!message) return "";
+  if (!message.content) return "Сообщение удалено";
   if (message.kind === "voice") {
     return message.voiceListenedAt
       ? "🎤 Голосовое · Прослушано"
@@ -879,7 +880,16 @@ function Conversation({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connectionState, setConnectionState] =
     useState<ChatState>(initialState);
-  const [draft, setDraft] = useState("");
+  const draftKey = `dirami-draft:${me.userId}:${peer.id}`;
+  const [draft, setDraft] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return window.localStorage.getItem(draftKey) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
   const [sending, setSending] = useState(false);
   const [voiceActive, setVoiceActive] = useState(false);
   const [requestBusy, setRequestBusy] = useState(false);
@@ -905,6 +915,15 @@ function Conversation({
   const scrollActionRef = useRef<"restore" | "bottom" | "none">("bottom");
   const pressTimer = useRef<number | null>(null);
   const pressStart = useRef({ x: 0, y: 0 });
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const swipeRef = useRef<{
+    id: string;
+    el: HTMLElement;
+    startX: number;
+    startY: number;
+    active: boolean;
+    dx: number;
+  } | null>(null);
   const [enterIds, setEnterIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -914,6 +933,16 @@ function Conversation({
   useEffect(() => {
     meIdRef.current = me.userId;
   }, [me.userId]);
+
+  // Черновик живёт в localStorage по паре «я + собеседник»: написал,
+  // свайпнул в другой чат — текст не потеряется.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(draftKey, draft);
+    } catch {
+      /* storage недоступен */
+    }
+  }, [draft, draftKey]);
   const peerName = peer.displayName || peer.nickname;
   const canUseHyperReactions = Boolean(me.isHyperVerified);
 
@@ -927,12 +956,21 @@ function Conversation({
   function openMenu(id: string, x: number, y: number, mine: boolean) {
     window.getSelection()?.removeAllRanges();
     const width = 228;
-    const height = canUseHyperReactions ? 334 : 278;
+    const base = canUseHyperReactions ? 334 : 278;
+    const height = base + (mine ? 86 : 0);
     let left = mine ? x - width + 12 : x - 12;
     let top = y - 64;
     left = Math.min(Math.max(10, left), window.innerWidth - width - 10);
     top = Math.min(Math.max(10, top), window.innerHeight - height - 10);
     setMenu({ id, x: left, y: top });
+  }
+
+  function resetSwipeTransform(el: HTMLElement) {
+    el.style.transition = "transform 0.22s cubic-bezier(0.22, 0.9, 0.3, 1)";
+    el.style.transform = "translateX(0px)";
+    window.setTimeout(() => {
+      el.style.transition = "";
+    }, 240);
   }
 
   async function react(messageId: string, emoji: string) {
@@ -1037,7 +1075,11 @@ function Conversation({
 
         let latest = afterRef.current;
         for (const item of data.messages) {
-          const candidates = [item.createdAt, item.voice?.listenedAt].filter(
+          const candidates = [
+            item.createdAt,
+            item.updatedAt,
+            item.voice?.listenedAt,
+          ].filter(
             (value): value is string => Boolean(value),
           );
           for (const candidate of candidates) {
@@ -1255,6 +1297,10 @@ function Conversation({
   async function send(event: FormEvent) {
     event.preventDefault();
     if (sending) return;
+    if (editing) {
+      await saveEdit();
+      return;
+    }
     const content = draft.trim();
     if (!content) return;
 
@@ -1395,6 +1441,119 @@ function Conversation({
     onSent();
   }
 
+  function startEdit(message: ChatMessage) {
+    setMenu(null);
+    setReplyTo(null);
+    setEmojiOpen(false);
+    setEditing(message);
+    setDraft(message.content);
+    setError("");
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        const length = el.value.length;
+        el.setSelectionRange(length, length);
+      }
+    });
+  }
+
+  function cancelEdit() {
+    setEditing(null);
+    setDraft("");
+  }
+
+  async function saveEdit() {
+    const target = editing;
+    if (!target || sending) return;
+    const content = draft.trim();
+    if (!content) return;
+    if (content === target.content) {
+      cancelEdit();
+      return;
+    }
+    setSending(true);
+    try {
+      const response = await fetch(`/api/messages/${target.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (response.status === 401) {
+        onAuthLost();
+        return;
+      }
+      const data = await readJsonResponse<{
+        message?: ChatMessage;
+        error?: string;
+      }>(response);
+      if (!response.ok || !data?.message) {
+        setError(data?.error ?? "Не удалось изменить сообщение");
+        return;
+      }
+      const updated = data.message;
+      setError("");
+      setEditing(null);
+      setDraft("");
+      setMessages((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      if (!afterRef.current || updated.updatedAt > afterRef.current) {
+        afterRef.current = updated.updatedAt;
+      }
+    } catch {
+      setError("Сеть недоступна");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function deleteMessage(messageId: string) {
+    setError("");
+    try {
+      const response = await fetch(`/api/messages/${messageId}`, {
+        method: "DELETE",
+      });
+      if (response.status === 401) {
+        onAuthLost();
+        return;
+      }
+      const data = await readJsonResponse<{
+        message?: ChatMessage;
+        error?: string;
+      }>(response);
+      if (!response.ok || !data?.message) {
+        setError(data?.error ?? "Не удалось удалить сообщение");
+        return;
+      }
+      const updated = data.message;
+      setError("");
+      setMessages((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      if (!afterRef.current || updated.updatedAt > afterRef.current) {
+        afterRef.current = updated.updatedAt;
+      }
+      setEditing((current) => (current?.id === updated.id ? null : current));
+      setReplyTo((current) => (current?.id === updated.id ? null : current));
+    } catch {
+      setError("Сеть недоступна");
+    }
+  }
+
+  const menuTarget = menu
+    ? (messages.find((item) => item.id === menu.id) ?? null)
+    : null;
+  const menuEditable = Boolean(
+    menuTarget &&
+      menuTarget.senderId === me.userId &&
+      menuTarget.kind === "text" &&
+      !menuTarget.deletedAt,
+  );
+  const menuDeletable = Boolean(
+    menuTarget && menuTarget.senderId === me.userId && !menuTarget.deletedAt,
+  );
+
   const emptyText =
     connectionState === "blocked"
       ? "Запрос отклонён"
@@ -1406,7 +1565,7 @@ function Conversation({
 
   return (
     <>
-      <header className="absolute inset-x-2 top-2 z-20 md:inset-x-3 md:top-3">
+      <header className="conversation-in absolute inset-x-2 top-2 z-20 md:inset-x-3 md:top-3">
         <div className="chat-header-card flex items-center gap-1.5 rounded-2xl px-1.5 py-1.5">
           <button
             aria-label="Назад к чатам"
@@ -1473,7 +1632,7 @@ function Conversation({
 
       <div className="relative min-h-0 flex-1">
         <div
-          className="chat-wallpaper scrollbar-thin absolute inset-0 overflow-y-auto px-3 pt-[72px] pb-2 [overflow-anchor:none] sm:px-4"
+          className="chat-wallpaper scrollbar-thin conversation-in absolute inset-0 overflow-y-auto px-3 pt-[72px] pb-2 [overflow-anchor:none] sm:px-4"
           onClick={() => setMenu(null)}
           onScroll={(event) => {
             if (event.currentTarget.scrollTop < 80) void loadOlder();
@@ -1515,6 +1674,7 @@ function Conversation({
               !showDate && !!previous && previous.senderId === message.senderId;
             const lastOfGroup =
               !next || next.senderId !== message.senderId || dateBeforeNext;
+            const isDeleted = Boolean(message.deletedAt);
             const hasReactions = Boolean(message.reactions?.length);
             const isVoice = message.kind === "voice" && message.voice;
             const bubbleBottomPad = hasReactions
@@ -1541,7 +1701,9 @@ function Conversation({
                   }`}
                 >
                   <div
-                    className={`message-bubble no-select relative min-w-[86px] max-w-[82%] rounded-[1.1rem] border px-2.5 pt-1.5 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.9)] sm:max-w-[72%] ${bubbleBottomPad} ${
+                    className={`message-bubble no-select ${
+                      isDeleted ? "deleted-bubble" : ""
+                    } relative min-w-[86px] max-w-[82%] rounded-[1.1rem] border px-2.5 pt-1.5 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.9)] sm:max-w-[72%] [touch-action:pan-y] ${bubbleBottomPad} ${
                       mine
                         ? `message-bubble-mine border-transparent bg-accent text-on-accent ${
                             [
@@ -1562,7 +1724,7 @@ function Conversation({
                     }`}
                     onContextMenu={(event) => {
                       event.preventDefault();
-                      if (connectionState === "accepted") {
+                      if (connectionState === "accepted" && !isDeleted) {
                         openMenu(
                           message.id,
                           event.clientX,
@@ -1572,7 +1734,10 @@ function Conversation({
                       }
                     }}
                     onPointerDown={(event) => {
-                      if (connectionState !== "accepted") return;
+                      if (connectionState !== "accepted" || isDeleted) {
+                        swipeRef.current = null;
+                        return;
+                      }
                       if (event.pointerType === "mouse" && event.button !== 0)
                         return;
                       clearPress();
@@ -1580,6 +1745,18 @@ function Conversation({
                         x: event.clientX,
                         y: event.clientY,
                       };
+                      if (event.pointerType === "touch") {
+                        swipeRef.current = {
+                          id: message.id,
+                          el: event.currentTarget,
+                          startX: event.clientX,
+                          startY: event.clientY,
+                          active: false,
+                          dx: 0,
+                        };
+                      } else {
+                        swipeRef.current = null;
+                      }
                       const x = event.clientX;
                       const y = event.clientY;
                       pressTimer.current = window.setTimeout(() => {
@@ -1587,15 +1764,70 @@ function Conversation({
                         openMenu(message.id, x, y, mine);
                       }, 430);
                     }}
-                    onPointerUp={clearPress}
-                    onPointerCancel={clearPress}
+                    onPointerUp={(event) => {
+                      const swipe = swipeRef.current;
+                      if (swipe && swipe.id === message.id) {
+                        swipeRef.current = null;
+                        if (swipe.active) {
+                          resetSwipeTransform(swipe.el);
+                          if (Math.abs(swipe.dx) > 56) {
+                            navigator.vibrate?.(8);
+                            const target = messagesRef.current.find(
+                              (item) => item.id === swipe.id,
+                            );
+                            if (target) setReplyTo(target);
+                          }
+                        }
+                      }
+                      void event;
+                      clearPress();
+                    }}
+                    onPointerCancel={(event) => {
+                      const swipe = swipeRef.current;
+                      if (swipe && swipe.id === message.id) {
+                        swipeRef.current = null;
+                        if (swipe.active) resetSwipeTransform(swipe.el);
+                      }
+                      void event;
+                      clearPress();
+                    }}
                     onPointerMove={(event) => {
                       const dx = event.clientX - pressStart.current.x;
                       const dy = event.clientY - pressStart.current.y;
                       if (dx * dx + dy * dy > 100) clearPress();
+                      const swipe = swipeRef.current;
+                      if (
+                        !swipe ||
+                        swipe.id !== message.id ||
+                        event.pointerType !== "touch"
+                      ) {
+                        return;
+                      }
+                      if (!swipe.active) {
+                        if (
+                          Math.abs(dx) > 14 &&
+                          Math.abs(dx) > Math.abs(dy) * 1.25
+                        ) {
+                          swipe.active = true;
+                          clearPress();
+                          try {
+                            event.currentTarget.setPointerCapture(
+                              event.pointerId,
+                            );
+                          } catch {
+                            /* палец уже ушёл */
+                          }
+                        }
+                      }
+                      if (swipe.active) {
+                        const raw = Math.max(-110, Math.min(110, dx * 0.62));
+                        swipe.dx = raw;
+                        swipe.el.style.transition = "none";
+                        swipe.el.style.transform = `translateX(${raw}px)`;
+                      }
                     }}
                   >
-                    {message.replyTo ? (
+                    {!isDeleted && message.replyTo ? (
                       <div
                         className={`mb-1.5 rounded-xl border-l-[3px] px-2.5 py-1 text-xs ${
                           mine
@@ -1614,15 +1846,21 @@ function Conversation({
                         <p className="mt-0.5 truncate text-[11px] opacity-70">
                           <RichText
                             text={
-                              message.replyTo.kind === "voice"
-                                ? `🎤 Голосовое · ${formatVoiceDuration(message.replyTo.voiceDurationMs)}`
-                                : message.replyTo.content
+                              message.replyTo.content
+                                ? message.replyTo.kind === "voice"
+                                  ? `🎤 Голосовое · ${formatVoiceDuration(message.replyTo.voiceDurationMs)}`
+                                  : message.replyTo.content
+                                : "Сообщение удалено"
                             }
                           />
                         </p>
                       </div>
                     ) : null}
-                    {message.kind === "voice" && message.voice ? (
+                    {isDeleted ? (
+                      <p className="py-0.5 text-[13px] italic opacity-90">
+                        Сообщение удалено
+                      </p>
+                    ) : message.kind === "voice" && message.voice ? (
                       <VoiceMessagePlayer
                         messageId={message.id}
                         mine={mine}
@@ -1635,7 +1873,7 @@ function Conversation({
                         {hasReactions ? null : <span className="meta-spacer" />}
                       </p>
                     )}
-                    {hasReactions ? (
+                    {!isDeleted && hasReactions ? (
                       <div className="mt-1.5 flex flex-wrap justify-end gap-1">
                         {message.reactions.map((reaction) => (
                           <span
@@ -1660,7 +1898,12 @@ function Conversation({
                       }`}
                     >
                       <span>{formatTime(message.createdAt)}</span>
-                      {mine ? <DoubleCheckIcon /> : null}
+                      {message.editedAt && !isDeleted ? (
+                        <span className="whitespace-nowrap text-[10px]">
+                          изм.
+                        </span>
+                      ) : null}
+                      {mine && !isDeleted ? <DoubleCheckIcon /> : null}
                     </div>
                   </div>
                 </div>
@@ -1830,6 +2073,31 @@ function Conversation({
             >
               Копировать
             </button>
+            {menuEditable ? (
+              <button
+                className="block w-full px-3.5 py-2 text-left text-[13px] transition hover:bg-[var(--accent-muted)]"
+                onClick={() => {
+                  const target = messages.find((item) => item.id === menu.id);
+                  if (target) startEdit(target);
+                }}
+                type="button"
+              >
+                Изменить
+              </button>
+            ) : null}
+            {menuDeletable ? (
+              <button
+                className="block w-full px-3.5 py-2 text-left text-[13px] text-red-300 transition hover:bg-red-500/10"
+                onClick={() => {
+                  if (window.confirm("Удалить сообщение?")) {
+                    void deleteMessage(menu.id);
+                  }
+                }}
+                type="button"
+              >
+                Удалить
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -1880,7 +2148,7 @@ function Conversation({
         </div>
       ) : (
         <form
-          className="px-2 pb-[max(0.55rem,env(safe-area-inset-bottom))] pt-1 sm:px-3 sm:pb-2.5"
+          className="conversation-in px-2 pb-[max(0.55rem,env(safe-area-inset-bottom))] pt-1 sm:px-3 sm:pb-2.5"
           onSubmit={(event) => void send(event)}
         >
           {connectionState === "none" ? (
@@ -1889,7 +2157,25 @@ function Conversation({
               принятия запроса.
             </p>
           ) : null}
-          {replyTo ? (
+          {editing ? (
+            <div className="chat-header-card mb-1.5 flex items-center justify-between gap-3 rounded-xl px-3 py-1.5">
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-accent-soft">
+                  Редактирование
+                </p>
+                <p className="truncate text-xs text-[var(--muted-2)]">
+                  <RichText text={editing.content} />
+                </p>
+              </div>
+              <button
+                className="shrink-0 text-xs text-[var(--muted-2)]"
+                onClick={cancelEdit}
+                type="button"
+              >
+                Отменить
+              </button>
+            </div>
+          ) : replyTo ? (
             <div className="chat-header-card mb-1.5 flex items-center justify-between gap-3 rounded-xl px-3 py-1.5">
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-accent-soft">
@@ -1963,6 +2249,7 @@ function Conversation({
                 </>
               ) : null}
               <textarea
+                ref={textareaRef}
                 className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-0.5 py-2 text-[16px] leading-tight sm:text-[15px]"
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -1981,12 +2268,18 @@ function Conversation({
                 rows={1}
                 value={draft}
               />
-              {draft.trim() ? (
+              {draft.trim() || editing ? (
                 <button
-                  aria-label="Отправить"
+                  aria-label={editing ? "Сохранить" : "Отправить"}
                   className="hover-accent grid size-9 shrink-0 place-items-center rounded-full bg-accent text-on-accent shadow-[0_8px_20px_-10px_var(--accent)] transition disabled:opacity-50"
-                  disabled={sending}
-                  title={connectionState === "none" ? "Отправить запрос" : "Отправить"}
+                  disabled={sending || (Boolean(editing) && !draft.trim())}
+                  title={
+                    editing
+                      ? "Сохранить изменения"
+                      : connectionState === "none"
+                        ? "Отправить запрос"
+                        : "Отправить"
+                  }
                   type="submit"
                 >
                   <svg

@@ -43,6 +43,9 @@ export type RawMessage = {
   kind: "TEXT" | "VOICE";
   content: string;
   createdAt: Date;
+  updatedAt: Date;
+  editedAt: Date | null;
+  deletedAt: Date | null;
   senderId: string;
   receiverId: string;
   voice: {
@@ -86,6 +89,9 @@ export function serializeMessage(message: RawMessage, me: string): ChatMessage {
     kind: message.kind === "VOICE" ? "voice" : "text",
     content: message.content,
     createdAt: message.createdAt.toISOString(),
+    updatedAt: message.updatedAt.toISOString(),
+    editedAt: message.editedAt?.toISOString() ?? null,
+    deletedAt: message.deletedAt?.toISOString() ?? null,
     senderId: message.senderId,
     receiverId: message.receiverId,
     voice: message.voice

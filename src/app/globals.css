@@ -362,6 +362,30 @@ input:focus {
   animation: msg-theirs 0.24s ease-out both;
 }
 
+/* Удалённое сообщение — нейтральный серый баббл вместо содержимого */
+.deleted-bubble {
+  min-width: 0 !important;
+  background: var(--bubble-in) !important;
+  border-color: var(--border) !important;
+  color: var(--muted-2) !important;
+}
+
+/* Плавное появление чата при переключении собеседника */
+.conversation-in {
+  animation: conversation-in 0.26s ease-out both;
+}
+
+@keyframes conversation-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .message-bubble::after {
   position: absolute;
   bottom: -1px;
@@ -723,7 +747,8 @@ body:has(> .app-shell) {
   .sheet-in,
   .account-drawer-in,
   .msg-enter-mine,
-  .msg-enter-theirs {
+  .msg-enter-theirs,
+  .conversation-in {
     animation: none;
   }
 }
