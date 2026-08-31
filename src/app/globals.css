@@ -388,14 +388,14 @@ input:focus {
 
 .meta-spacer {
   display: inline-block;
-  width: 64px;
+  width: 56px;
   height: 0;
 }
 
 .bubble-meta {
   position: absolute;
-  right: 11px;
-  bottom: 5px;
+  right: 9px;
+  bottom: 4px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -635,6 +635,69 @@ html[data-theme="day"] .chat-wallpaper {
   50% {
     transform: translateZ(0) scale(1.07);
   }
+}
+
+/* ===== Floating keyboard-safe shell ===== */
+.app-shell {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  height: var(--vvh, 100dvh);
+}
+
+body:has(> .app-shell) {
+  overflow: hidden;
+}
+
+/* ===== Floating glass cards ===== */
+.chat-header-card {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel) 88%, transparent),
+    color-mix(in srgb, var(--panel) 72%, transparent)
+  );
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  border: 1px solid var(--border);
+  box-shadow: 0 14px 34px -20px rgb(0 0 0 / 0.5);
+}
+
+.composer-capsule {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel) 86%, transparent),
+    color-mix(in srgb, var(--panel) 70%, transparent)
+  );
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 40px -22px rgb(0 0 0 / 0.55);
+}
+
+/* ===== Voice waveform ===== */
+.voice-bar {
+  display: block;
+  width: 3px;
+  min-height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.voice-bar-played {
+  opacity: 1;
+}
+
+.voice-player-theirs .voice-bar {
+  background: var(--muted-2);
+  opacity: 0.5;
+}
+
+.voice-player-theirs .voice-bar-played {
+  background: var(--accent);
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

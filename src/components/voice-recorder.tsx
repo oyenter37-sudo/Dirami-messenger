@@ -286,7 +286,7 @@ export function VoiceRecorder({
     return (
       <button
         aria-label="Записать голосовое сообщение"
-        className="grid size-12 shrink-0 place-items-center rounded-full border border-[var(--border)] bg-[var(--bg)] text-accent-soft transition hover:border-[var(--accent)] hover:bg-accent-muted disabled:opacity-40"
+        className="grid size-9 shrink-0 place-items-center rounded-full text-[var(--muted-2)] transition hover:bg-[var(--accent-muted)] hover:text-accent disabled:opacity-40"
         disabled={disabled}
         onClick={() => void startRecording()}
         title="Записать голосовое"
@@ -295,9 +295,9 @@ export function VoiceRecorder({
         <svg
           aria-hidden="true"
           fill="none"
-          height="21"
+          height="19"
           viewBox="0 0 24 24"
-          width="21"
+          width="19"
         >
           <rect
             height="12"
@@ -320,10 +320,10 @@ export function VoiceRecorder({
   }
 
   return (
-    <div className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg)] p-1.5 pl-2">
+    <div className="composer-capsule flex min-h-[44px] min-w-0 flex-1 items-center gap-1 rounded-[1.4rem] p-1 pl-1.5">
       <button
         aria-label="Отменить запись"
-        className="grid size-9 shrink-0 place-items-center rounded-full text-[var(--muted-2)] transition hover:bg-white/5 disabled:opacity-40"
+        className="grid size-9 shrink-0 place-items-center rounded-full text-lg font-light text-[var(--muted-2)] transition hover:bg-white/5 disabled:opacity-40"
         disabled={mode === "sending"}
         onClick={cancel}
         title="Отменить"
@@ -334,7 +334,7 @@ export function VoiceRecorder({
       <span
         className={`size-2.5 shrink-0 rounded-full ${mode === "paused" || mode === "failed" ? "bg-amber-300" : "animate-pulse bg-red-400"}`}
       />
-      <span className="min-w-0 flex-1 truncate text-xs font-medium">
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
         {mode === "sending"
           ? "Отправляем…"
           : mode === "failed"
@@ -360,7 +360,7 @@ export function VoiceRecorder({
             ? "Повторить отправку"
             : "Остановить и отправить запись"
         }
-        className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-sm font-bold text-on-accent transition hover:scale-105 disabled:opacity-50"
+        className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-sm font-bold text-on-accent transition hover:scale-105 disabled:opacity-50"
         disabled={mode === "sending"}
         onClick={() => {
           if (mode === "failed" && pendingRef.current) {

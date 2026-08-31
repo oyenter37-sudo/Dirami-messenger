@@ -404,6 +404,26 @@ export function MessengerApp({
   }, []);
 
   useEffect(() => {
+    const visualViewport = window.visualViewport;
+    if (!visualViewport) return;
+    const apply = () => {
+      document.documentElement.style.setProperty(
+        "--vvh",
+        `${visualViewport.height}px`,
+      );
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+    };
+    apply();
+    visualViewport.addEventListener("resize", apply);
+    visualViewport.addEventListener("scroll", apply);
+    return () => {
+      visualViewport.removeEventListener("resize", apply);
+      visualViewport.removeEventListener("scroll", apply);
+      document.documentElement.style.removeProperty("--vvh");
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     const tick = async () => {
@@ -517,14 +537,14 @@ export function MessengerApp({
   }
 
   return (
-    <div className="relative flex h-full overflow-hidden bg-[var(--bg)]">
+    <div className="app-shell flex overflow-hidden bg-[var(--bg)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--glow-a),transparent_36%)]" />
       <aside
         className={`relative z-10 h-full w-full shrink-0 flex-col border-r border-[var(--border)] bg-[var(--panel)] md:w-80 lg:w-96 ${
           peerId ? "hidden md:flex" : "flex"
         }`}
       >
-        <header className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-b border-[var(--border)] px-3 py-3.5">
+        <header className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-b border-[var(--border)] px-3 py-2.5">
           <button
             aria-label="Открыть мой профиль"
             className="group flex min-w-0 max-w-full items-center gap-2 justify-self-start rounded-2xl p-1 text-left transition hover:bg-white/5"
@@ -576,25 +596,25 @@ export function MessengerApp({
           </button>
         </header>
 
-        <div className="px-3 pt-3">
-          <div className="relative overflow-hidden rounded-2xl border border-[var(--accent)]/20 bg-[linear-gradient(110deg,var(--accent-muted),rgba(255,255,255,.025))] px-4 py-2.5 text-center shadow-[0_12px_30px_-24px_var(--accent)]">
+        <div className="px-3 pt-2.5">
+          <div className="relative overflow-hidden rounded-2xl border border-[var(--accent)]/20 bg-[linear-gradient(110deg,var(--accent-muted),rgba(255,255,255,.025))] px-4 py-2 text-center shadow-[0_12px_30px_-24px_var(--accent)]">
             <span className="pointer-events-none absolute -top-6 -left-4 size-14 rounded-full bg-[var(--accent)]/10 blur-xl" />
-            <p className="relative text-xs font-bold tracking-[0.01em] text-[var(--muted)]">
+            <p className="relative text-[11px] font-bold tracking-[0.01em] text-[var(--muted)]">
               <RichText text="Dirami v1 – перед вами!" />
             </p>
           </div>
         </div>
 
-        <div className="px-3 py-3">
+        <div className="px-3 py-2.5">
           <input
-            className="w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-2.5 text-sm placeholder:text-[var(--muted-2)]"
+            className="w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-2 text-sm placeholder:text-[var(--muted-2)]"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Найти пользователя по нику"
             value={query}
           />
         </div>
 
-        <ul className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+        <ul className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
           {searching && query.trim() ? (
             <li className="px-3 py-6 text-sm text-[var(--muted-2)]">Ищем…</li>
           ) : sidebarItems.length === 0 ? (
@@ -614,7 +634,7 @@ export function MessengerApp({
               return (
                 <li key={item.user.id}>
                   <button
-                    className={`mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition ${
+                    className={`mb-0.5 flex w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition ${
                       active
                         ? "bg-accent-muted ring-1 ring-[var(--accent)]/40"
                         : "hover:bg-[var(--accent-muted)]"
@@ -1259,54 +1279,74 @@ function Conversation({
 
   return (
     <>
-      <header className="chat-header absolute inset-x-0 top-0 z-20 flex items-center gap-3 border-b border-[var(--border)] px-4 py-2.5">
-        <button
-          className="rounded-xl px-2 py-1 text-sm text-[var(--muted-2)] transition hover:bg-[var(--accent-muted)] md:hidden"
-          onClick={onBack}
-          type="button"
-        >
-          ←
-        </button>
-        <button
-          aria-label={`Открыть профиль ${peerName}`}
-          className="flex min-w-0 items-center gap-3 text-left"
-          onClick={onOpenProfile}
-          title="Открыть профиль"
-          type="button"
-        >
-          <UserAvatar
-            avatarUrl={peer.avatarUrl}
-            className="size-10 rounded-full text-sm ring-2 ring-[var(--accent)]/30"
-            nickname={peerName}
-          />
-          <div className="min-w-0">
-            <p className="min-w-0 text-sm font-semibold">
-              <VerifiedName
-                hyperAppearance={peer}
-                isHyperVerified={peer.isHyperVerified}
-                isVerified={peer.isVerified}
-                name={peerName}
-                truncate
-              />
-            </p>
-            <p
-              className={`text-[11px] ${
-                connectionState === "accepted"
-                  ? "text-accent"
-                  : "text-[var(--muted-2)]"
-              }`}
+      <header className="absolute inset-x-2 top-2 z-20 md:inset-x-3 md:top-3">
+        <div className="chat-header-card flex items-center gap-1.5 rounded-2xl px-1.5 py-1.5">
+          <button
+            aria-label="Назад к чатам"
+            className="grid size-9 shrink-0 place-items-center rounded-full text-[var(--muted)] transition hover:bg-[var(--accent-muted)] hover:text-[var(--text)] active:scale-95 md:hidden"
+            onClick={onBack}
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              fill="none"
+              height="19"
+              viewBox="0 0 24 24"
+              width="19"
             >
-              {connectionState === "accepted"
-                ? "чат активен"
-                : stateLabel(connectionState)}
-            </p>
-          </div>
-        </button>
+              <path
+                d="M14.5 5.5 8 12l6.5 6.5"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+              />
+            </svg>
+          </button>
+          <button
+            aria-label={`Открыть профиль ${peerName}`}
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl px-1 py-0.5 text-left transition hover:bg-white/5"
+            onClick={onOpenProfile}
+            title="Открыть профиль"
+            type="button"
+          >
+            <UserAvatar
+              avatarUrl={peer.avatarUrl}
+              className="size-9 shrink-0 rounded-full text-xs ring-2 ring-[var(--accent)]/30"
+              nickname={peerName}
+            />
+            <div className="min-w-0">
+              <p className="min-w-0 text-sm font-semibold leading-tight">
+                <VerifiedName
+                  hyperAppearance={peer}
+                  isHyperVerified={peer.isHyperVerified}
+                  isVerified={peer.isVerified}
+                  name={peerName}
+                  truncate
+                />
+              </p>
+              <p
+                className={`mt-0.5 inline-flex items-center gap-1.5 text-[11px] leading-tight ${
+                  connectionState === "accepted"
+                    ? "text-accent"
+                    : "text-[var(--muted-2)]"
+                }`}
+              >
+                {connectionState === "accepted" ? (
+                  <span className="size-1.5 animate-pulse rounded-full bg-accent" />
+                ) : null}
+                {connectionState === "accepted"
+                  ? "активен"
+                  : stateLabel(connectionState)}
+              </p>
+            </div>
+          </button>
+        </div>
       </header>
 
       <div className="relative min-h-0 flex-1">
         <div
-          className="chat-wallpaper scrollbar-thin absolute inset-0 overflow-y-auto px-4 pt-[68px] pb-3 [overflow-anchor:none]"
+          className="chat-wallpaper scrollbar-thin absolute inset-0 overflow-y-auto px-3 pt-[72px] pb-2 [overflow-anchor:none] sm:px-4"
           onClick={() => setMenu(null)}
           onScroll={(event) => {
             if (event.currentTarget.scrollTop < 80) void loadOlder();
@@ -1351,19 +1391,19 @@ function Conversation({
             const hasReactions = Boolean(message.reactions?.length);
             const isVoice = message.kind === "voice" && message.voice;
             const bubbleBottomPad = hasReactions
-              ? "pb-9"
+              ? "pb-8"
               : isVoice
-                ? "pb-7"
-                : "pb-2";
+                ? "pb-6"
+                : "pb-[7px]";
 
             return (
               <div
-                className={groupedTop ? "mt-[3px]" : "mt-2"}
+                className={groupedTop ? "mt-[2px]" : "mt-1.5"}
                 key={message.id}
               >
                 {showDate ? (
-                  <div className="my-4 flex justify-center first:mt-1">
-                    <span className="rounded-full border border-[var(--border)] bg-[var(--panel)]/90 px-3 py-1 text-[10px] font-semibold text-[var(--muted-2)] shadow-sm">
+                  <div className="my-3 flex justify-center first:mt-1">
+                    <span className="rounded-full border border-[var(--border)] bg-[var(--panel)]/90 px-2.5 py-[3px] text-[10px] font-semibold text-[var(--muted-2)] shadow-sm">
                       {messageDateLabel(message.createdAt)}
                     </span>
                   </div>
@@ -1374,13 +1414,23 @@ function Conversation({
                   }`}
                 >
                   <div
-                    className={`message-bubble no-select relative min-w-[92px] max-w-[84%] rounded-[1.25rem] border px-3 pt-2 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.9)] sm:max-w-[72%] ${bubbleBottomPad} ${
+                    className={`message-bubble no-select relative min-w-[86px] max-w-[82%] rounded-[1.1rem] border px-2.5 pt-1.5 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.9)] sm:max-w-[72%] ${bubbleBottomPad} ${
                       mine
                         ? `message-bubble-mine border-transparent bg-accent text-on-accent ${
-                            lastOfGroup ? "rounded-br-[0.4rem]" : "no-tail"
+                            [
+                              groupedTop ? "rounded-tr-[0.4rem]" : "",
+                              lastOfGroup ? "rounded-br-[0.4rem]" : "no-tail",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")
                           }`
                         : `message-bubble-theirs border-[var(--border)] bg-[var(--bubble-in)] ${
-                            lastOfGroup ? "rounded-bl-[0.4rem]" : "no-tail"
+                            [
+                              groupedTop ? "rounded-tl-[0.4rem]" : "",
+                              lastOfGroup ? "rounded-bl-[0.4rem]" : "no-tail",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")
                           }`
                     }`}
                     onContextMenu={(event) => {
@@ -1420,7 +1470,7 @@ function Conversation({
                   >
                     {message.replyTo ? (
                       <div
-                        className={`mb-2 rounded-xl border-l-[3px] px-2.5 py-1.5 text-xs ${
+                        className={`mb-1.5 rounded-xl border-l-[3px] px-2.5 py-1 text-xs ${
                           mine
                             ? "border-[var(--on-accent)]/45 bg-black/10"
                             : "border-[var(--accent)] bg-black/15"
@@ -1453,7 +1503,7 @@ function Conversation({
                         voice={message.voice}
                       />
                     ) : (
-                      <p className="whitespace-pre-wrap break-words text-[15px] leading-[1.4]">
+                      <p className="whitespace-pre-wrap break-words text-[15px] leading-[1.35]">
                         <RichText text={message.content} />
                         {hasReactions ? null : <span className="meta-spacer" />}
                       </p>
@@ -1497,7 +1547,7 @@ function Conversation({
         {showScrollDown ? (
           <button
             aria-label="Пролистать вниз"
-            className="chat-header absolute bottom-3 right-4 z-10 grid size-10 place-items-center rounded-full border border-[var(--border)] text-[var(--muted)] shadow-lg transition hover:text-accent"
+            className="chat-header absolute bottom-3.5 right-3 z-10 grid size-9 place-items-center rounded-full border border-[var(--border)] text-[var(--muted)] shadow-lg transition hover:text-accent"
             onClick={scrollToBottom}
             title="Вниз"
             type="button"
@@ -1600,7 +1650,7 @@ function Conversation({
       ) : null}
 
       {connectionState === "pending_in" ? (
-        <div className="border-t border-[var(--border)] bg-[var(--panel)]/80 p-4">
+        <div className="chat-header-card mx-2 mb-2 rounded-2xl p-3.5 sm:mx-3">
           <p className="text-sm font-semibold">
             {peerName} хочет начать общение
           </p>
@@ -1629,14 +1679,14 @@ function Conversation({
           </div>
         </div>
       ) : connectionState === "pending_out" ? (
-        <div className="border-t border-[var(--border)] bg-[var(--panel)]/80 px-5 py-4 text-center">
+        <div className="chat-header-card mx-2 mb-2 rounded-2xl px-4 py-3.5 text-center sm:mx-3">
           <p className="text-sm font-semibold">Запрос отправлен</p>
           <p className="mt-1 text-xs text-[var(--muted-2)]">
             Можно будет писать дальше, когда {peerName} примет запрос.
           </p>
         </div>
       ) : connectionState === "blocked" ? (
-        <div className="border-t border-[var(--border)] bg-[var(--panel)]/80 px-5 py-4 text-center">
+        <div className="chat-header-card mx-2 mb-2 rounded-2xl px-4 py-3.5 text-center sm:mx-3">
           <p className="text-sm font-semibold">Запрос отклонён</p>
           <p className="mt-1 text-xs leading-5 text-[var(--muted-2)]">
             Вы не можете написать снова. Теперь {peerName} сможет отправить вам
@@ -1645,17 +1695,17 @@ function Conversation({
         </div>
       ) : (
         <form
-          className="border-t border-[var(--border)] bg-[var(--panel)]/60 p-2.5 sm:px-4 sm:py-3"
+          className="px-2 pb-[max(0.55rem,env(safe-area-inset-bottom))] pt-1 sm:px-3 sm:pb-2.5"
           onSubmit={(event) => void send(event)}
         >
           {connectionState === "none" ? (
-            <p className="mb-2 px-1 text-xs leading-5 text-[var(--muted-2)]">
+            <p className="mb-1.5 px-1.5 text-[11px] leading-4 text-[var(--muted-2)]">
               Можно отправить одно сообщение. Остальные станут доступны после
               принятия запроса.
             </p>
           ) : null}
           {replyTo ? (
-            <div className="mb-2 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
+            <div className="chat-header-card mb-1.5 flex items-center justify-between gap-3 rounded-xl px-3 py-1.5">
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-accent-soft">
                   Ответ {replyTo.senderId === me.userId ? "себе" : peerName}
@@ -1680,104 +1730,100 @@ function Conversation({
             </div>
           ) : null}
           {error ? (
-            <p className="mb-2 px-1 text-xs text-red-300">{error}</p>
+            <p className="mb-1.5 px-1.5 text-[11px] text-red-300">{error}</p>
           ) : null}
-          <div className="flex items-end gap-2">
-            {voiceActive ? (
-              <VoiceRecorder
-                key="voice-recorder"
-                disabled={sending}
-                onActiveChange={setVoiceActive}
-                onError={setError}
-                onSend={sendVoice}
+          {voiceActive ? (
+            <VoiceRecorder
+              key="voice-recorder"
+              disabled={sending}
+              onActiveChange={setVoiceActive}
+              onError={setError}
+              onSend={sendVoice}
+            />
+          ) : (
+            <div className="composer-capsule relative flex min-w-0 items-end gap-0.5 rounded-[1.4rem] p-1 transition focus-within:border-[var(--accent)]/55">
+              <button
+                aria-label="Выбрать эмодзи"
+                className="grid size-9 shrink-0 place-items-center rounded-full text-[16px] transition hover:bg-[var(--accent-muted)]"
+                onClick={() => setEmojiOpen((value) => !value)}
+                title="Эмодзи"
+                type="button"
+              >
+                <AppleEmoji emoji="😊" />
+              </button>
+              {emojiOpen ? (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setEmojiOpen(false)}
+                  />
+                  <div className="glass-menu menu-pop absolute bottom-[calc(100%+8px)] left-0 z-40 w-[252px] rounded-2xl p-2">
+                    <div className="grid grid-cols-8 gap-0.5">
+                      {QUICK_EMOJIS.map((emoji) => (
+                        <button
+                          className="grid size-7 place-items-center rounded-full text-[16px] transition hover:bg-[var(--accent-muted)]"
+                          key={emoji}
+                          onClick={() =>
+                            setDraft((current) => current + emoji)
+                          }
+                          title="Добавить в сообщение"
+                          type="button"
+                        >
+                          <AppleEmoji emoji={emoji} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : null}
+              <textarea
+                className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-0.5 py-2 text-[16px] leading-tight sm:text-[15px]"
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+                placeholder={
+                  connectionState === "none"
+                    ? `Первое сообщение для ${peerName}`
+                    : replyTo
+                      ? "Напишите ответ"
+                      : `Сообщение для ${peerName}`
+                }
+                rows={1}
+                value={draft}
               />
-            ) : (
-              <>
-                <div className="relative flex min-w-0 flex-1 items-end rounded-[1.5rem] border border-[var(--border)] bg-[var(--bg)] pr-1 transition focus-within:border-[var(--accent)]/55">
-                  <button
-                    aria-label="Выбрать эмодзи"
-                    className="grid size-10 shrink-0 place-items-center rounded-full text-[17px] transition hover:bg-[var(--accent-muted)]"
-                    onClick={() => setEmojiOpen((value) => !value)}
-                    title="Эмодзи"
-                    type="button"
+              {draft.trim() ? (
+                <button
+                  aria-label="Отправить"
+                  className="hover-accent grid size-9 shrink-0 place-items-center rounded-full bg-accent text-on-accent shadow-[0_8px_20px_-10px_var(--accent)] transition disabled:opacity-50"
+                  disabled={sending}
+                  title={connectionState === "none" ? "Отправить запрос" : "Отправить"}
+                  type="submit"
+                >
+                  <svg
+                    aria-hidden="true"
+                    fill="currentColor"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    width="17"
                   >
-                    <AppleEmoji emoji="😊" />
-                  </button>
-                  {emojiOpen ? (
-                    <>
-                      <div
-                        className="fixed inset-0 z-30"
-                        onClick={() => setEmojiOpen(false)}
-                      />
-                      <div className="glass-menu menu-pop absolute bottom-[calc(100%+8px)] left-0 z-40 w-[252px] rounded-2xl p-2">
-                        <div className="grid grid-cols-8 gap-0.5">
-                          {QUICK_EMOJIS.map((emoji) => (
-                            <button
-                              className="grid size-7 place-items-center rounded-full text-[16px] transition hover:bg-[var(--accent-muted)]"
-                              key={emoji}
-                              onClick={() =>
-                                setDraft((current) => current + emoji)
-                              }
-                              title="Добавить в сообщение"
-                              type="button"
-                            >
-                              <AppleEmoji emoji={emoji} />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  ) : null}
-                  <textarea
-                    className="max-h-36 min-h-10 flex-1 resize-none bg-transparent px-1 py-2.5 text-[15px]"
-                    onChange={(event) => setDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && !event.shiftKey) {
-                        event.preventDefault();
-                        event.currentTarget.form?.requestSubmit();
-                      }
-                    }}
-                    placeholder={
-                      connectionState === "none"
-                        ? `Первое сообщение для ${peerName}`
-                        : replyTo
-                          ? "Напишите ответ"
-                          : `Сообщение для ${peerName}`
-                    }
-                    rows={1}
-                    value={draft}
-                  />
-                </div>
-                {draft.trim() ? (
-                  <button
-                    aria-label="Отправить"
-                    className="hover-accent grid size-11 shrink-0 place-items-center rounded-full bg-accent text-on-accent shadow-[0_10px_24px_-12px_var(--accent)] transition disabled:opacity-50"
-                    disabled={sending}
-                    title={connectionState === "none" ? "Отправить запрос" : "Отправить"}
-                    type="submit"
-                  >
-                    <svg
-                      aria-hidden="true"
-                      fill="currentColor"
-                      height="19"
-                      viewBox="0 0 24 24"
-                      width="19"
-                    >
-                      <path d="M2 21l21-9L2 3v7l15 2-15 2z" />
-                    </svg>
-                  </button>
-                ) : (
-                  <VoiceRecorder
-                    key="voice-recorder"
-                    disabled={sending}
-                    onActiveChange={setVoiceActive}
-                    onError={setError}
-                    onSend={sendVoice}
-                  />
-                )}
-              </>
-            )}
-          </div>
+                    <path d="M2 21l21-9L2 3v7l15 2-15 2z" />
+                  </svg>
+                </button>
+              ) : (
+                <VoiceRecorder
+                  key="voice-recorder"
+                  disabled={sending}
+                  onActiveChange={setVoiceActive}
+                  onError={setError}
+                  onSend={sendVoice}
+                />
+              )}
+            </div>
+          )}
         </form>
       )}
     </>
