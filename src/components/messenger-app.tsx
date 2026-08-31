@@ -1678,7 +1678,7 @@ function Conversation({
             const hasReactions = Boolean(message.reactions?.length);
             const isVoice = message.kind === "voice" && message.voice;
             const bubbleBottomPad = hasReactions
-              ? "pb-8"
+              ? "pb-2"
               : isVoice
                 ? "pb-6"
                 : "pb-[7px]";
@@ -1870,41 +1870,84 @@ function Conversation({
                     ) : (
                       <p className="whitespace-pre-wrap break-words text-[15px] leading-[1.35]">
                         <RichText text={message.content} />
-                        {hasReactions ? null : <span className="meta-spacer" />}
+                        {hasReactions ? null : (
+                          <span
+                            className={
+                              message.editedAt
+                                ? "meta-spacer meta-spacer-edited"
+                                : "meta-spacer"
+                            }
+                          />
+                        )}
                       </p>
                     )}
                     {!isDeleted && hasReactions ? (
-                      <div className="mt-1.5 flex flex-wrap justify-end gap-1">
+                      <div
+                        className={`reaction-row mt-1 flex flex-wrap items-center gap-1 ${
+                          mine ? "justify-end" : "justify-start"
+                        }`}
+                      >
                         {message.reactions.map((reaction) => (
-                          <span
+                          <button
                             key={reaction.emoji}
-                            className={`rounded-full border px-1.5 py-0.5 text-[11px] shadow-sm ${
+                            type="button"
+                            title={
                               reaction.mine
-                                ? "border-white/25 bg-white/20"
-                                : "border-black/10 bg-black/10"
-                            }`}
+                                ? "Убрать реакцию"
+                                : "Поставить такую же"
+                            }
+                            className={`reaction-pill ${
+                              mine ? "on-mine" : "on-theirs"
+                            } ${reaction.mine ? "reaction-pill-mine" : ""}`}
+                            onClick={() =>
+                              void react(message.id, reaction.emoji)
+                            }
                           >
-                            <AppleEmoji emoji={reaction.emoji} />
-                            {reaction.count > 1 ? ` ${reaction.count}` : ""}
-                          </span>
+                            <AppleEmoji
+                              className="reaction-emoji"
+                              emoji={reaction.emoji}
+                            />
+                            {reaction.count > 1 ? (
+                              <span className="tabular-nums">
+                                {reaction.count}
+                              </span>
+                            ) : null}
+                          </button>
                         ))}
+                        <span
+                          className={`bubble-meta-inline ${
+                            mine
+                              ? "text-on-accent opacity-75"
+                              : "text-[var(--muted-2)]"
+                          }`}
+                        >
+                          <span>{formatTime(message.createdAt)}</span>
+                          {message.editedAt ? (
+                            <span className="whitespace-nowrap text-[10px]">
+                              изм.
+                            </span>
+                          ) : null}
+                          {mine ? <DoubleCheckIcon /> : null}
+                        </span>
                       </div>
                     ) : null}
-                    <div
-                      className={`bubble-meta ${
-                        mine
-                          ? "text-on-accent opacity-75"
-                          : "text-[var(--muted-2)]"
-                      }`}
-                    >
-                      <span>{formatTime(message.createdAt)}</span>
-                      {message.editedAt && !isDeleted ? (
-                        <span className="whitespace-nowrap text-[10px]">
-                          изм.
-                        </span>
-                      ) : null}
-                      {mine && !isDeleted ? <DoubleCheckIcon /> : null}
-                    </div>
+                    {!hasReactions ? (
+                      <div
+                        className={`bubble-meta ${
+                          mine
+                            ? "text-on-accent opacity-75"
+                            : "text-[var(--muted-2)]"
+                        }`}
+                      >
+                        <span>{formatTime(message.createdAt)}</span>
+                        {message.editedAt && !isDeleted ? (
+                          <span className="whitespace-nowrap text-[10px]">
+                            изм.
+                          </span>
+                        ) : null}
+                        {mine && !isDeleted ? <DoubleCheckIcon /> : null}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -2016,7 +2059,7 @@ function Conversation({
               {REACTIONS.map((emoji) => (
                 <button
                   key={emoji}
-                  className="grid size-7 place-items-center rounded-full text-[15px] transition hover:bg-[var(--accent-muted)]"
+                  className="grid size-7 place-items-center rounded-full text-[15px] transition hover:bg-[var(--accent-muted)] active:scale-90"
                   onClick={() => void react(menu.id, emoji)}
                   title="Реакция"
                   type="button"
@@ -2039,7 +2082,7 @@ function Conversation({
                   {HYPER_REACTIONS.map((emoji) => (
                     <button
                       key={emoji}
-                      className="grid size-7 place-items-center rounded-full bg-fuchsia-400/8 text-[15px] shadow-[inset_0_0_10px_rgba(217,70,239,.12)] hover:bg-fuchsia-300/15"
+                      className="grid size-7 place-items-center rounded-full bg-fuchsia-400/8 text-[15px] shadow-[inset_0_0_10px_rgba(217,70,239,.12)] transition hover:bg-fuchsia-300/15 active:scale-90"
                       onClick={() => void react(menu.id, emoji)}
                       title="Гиперреакция"
                       type="button"

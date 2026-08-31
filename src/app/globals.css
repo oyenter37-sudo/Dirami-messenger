@@ -412,8 +412,13 @@ input:focus {
 
 .meta-spacer {
   display: inline-block;
-  width: 56px;
+  width: 60px;
   height: 0;
+}
+
+/* запас под «изм.» в мете — без него время наползает на текст */
+.meta-spacer-edited {
+  width: 86px;
 }
 
 .bubble-meta {
@@ -427,6 +432,98 @@ input:focus {
   line-height: 1;
   white-space: nowrap;
   pointer-events: none;
+}
+
+/* мета в один ряд с реакциями (вместо абсолютного угла) */
+.bubble-meta-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  padding-left: 4px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.reaction-row {
+  row-gap: 3px;
+}
+
+.reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px 0 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 10px -6px rgb(0 0 0 / 0.4);
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease;
+  animation: reaction-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.reaction-pill:active {
+  transform: scale(0.9);
+}
+
+@media (hover: hover) {
+  .reaction-pill:hover {
+    transform: translateY(-1px) scale(1.05);
+  }
+}
+
+.reaction-emoji {
+  width: 15px;
+  height: 15px;
+}
+
+/* чужая реакция на моём баббле — стеклянная */
+.reaction-pill.on-mine {
+  background: rgb(255 255 255 / 0.18);
+  color: var(--on-accent);
+}
+
+/* моя реакция на моём баббле — белая чипа «вы выбрано» */
+.reaction-pill.on-mine.reaction-pill-mine {
+  background: rgb(255 255 255 / 0.94);
+  color: #17211e;
+}
+
+/* чужая реакция на чужом баббле — тихий чип */
+.reaction-pill.on-theirs {
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+/* моя реакция на чужом баббле — акцентная чипа */
+.reaction-pill.on-theirs.reaction-pill-mine {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+
+@keyframes reaction-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(5px);
+  }
+  62% {
+    opacity: 1;
+    transform: scale(1.09) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .menu-overlay {
@@ -748,6 +845,7 @@ body:has(> .app-shell) {
   .account-drawer-in,
   .msg-enter-mine,
   .msg-enter-theirs,
+  .reaction-pill,
   .conversation-in {
     animation: none;
   }
