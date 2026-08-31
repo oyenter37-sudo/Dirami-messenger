@@ -676,6 +676,18 @@ body:has(> .app-shell) {
   box-shadow: 0 16px 40px -22px rgb(0 0 0 / 0.55);
 }
 
+/* ===== Settings cards ===== */
+.settings-card {
+  border-radius: 1.4rem;
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel) 88%, transparent),
+    color-mix(in srgb, var(--panel) 72%, transparent)
+  );
+  box-shadow: 0 12px 30px -22px rgb(0 0 0 / 0.5);
+}
+
 /* ===== Voice waveform ===== */
 .voice-bar {
   display: block;

@@ -61,9 +61,9 @@ export function GoogleAccountSettings() {
   }
 
   return (
-    <section className="rounded-3xl border border-[var(--border)] bg-[var(--panel)] p-4">
+    <section className="settings-card p-4">
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-lg font-bold text-[#4285f4]">
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white text-lg font-bold text-[#4285f4] shadow-sm">
           G
         </span>
         <div className="min-w-0 flex-1">

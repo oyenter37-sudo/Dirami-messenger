@@ -105,6 +105,32 @@ function DoubleCheckIcon() {
   );
 }
 
+function ClockIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-3"
+      fill="none"
+      viewBox="0 0 16 16"
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="6.2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M8 4.8V8l2 1.4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 const QUICK_EMOJIS = [
   "😀",
   "😂",
@@ -183,6 +209,16 @@ async function readJsonResponse<T>(response: Response): Promise<T | null> {
 type SidebarItem = UserSearchResult & {
   lastMessage: ChatPreview["lastMessage"];
   unread: number;
+};
+
+type PendingMessage = {
+  tempId: string;
+  content: string;
+  createdAt: string;
+  replyToId: string | null;
+  replySenderId: string | null;
+  replyPreview: string | null;
+  status: "sending" | "failed";
 };
 
 type VerificationChangedDetail = Partial<HyperVerificationAppearance> & {
@@ -853,6 +889,7 @@ function Conversation({
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
   const afterRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -959,6 +996,7 @@ function Conversation({
           setMessages(data.messages);
           setEnterIds([]);
           setHistoryHasMore(Boolean(data.hasMore));
+          dropDeliveredPending(data.messages);
         } else if (data.messages.length > 0) {
           const incoming = data.messages;
           const cursorTime = after ? new Date(after).getTime() : 0;
@@ -982,6 +1020,7 @@ function Conversation({
               lastFresh.senderId === meIdRef.current || nearBottom
                 ? "bottom"
                 : "none";
+            dropDeliveredPending(fresh);
           }
           setMessages((current) => {
             const updates = new Map(incoming.map((item) => [item.id, item]));
@@ -1034,7 +1073,7 @@ function Conversation({
       bottomRef.current?.scrollIntoView({ block: "end" });
     }
     requestAnimationFrame(updateScrollState);
-  }, [messages.length]);
+  }, [messages.length, pendingMessages.length]);
 
   function updateScrollState() {
     const container = scrollRef.current;
@@ -1108,9 +1147,16 @@ function Conversation({
     }
   }
 
-  function addSentMessage(message: ChatMessage, state?: ChatState) {
+  function addSentMessage(
+    message: ChatMessage,
+    state?: ChatState,
+    animate = false,
+  ) {
     setReplyTo(null);
-    setEnterIds([message.id]);
+    if (animate) {
+      setEnterIds([message.id]);
+      playMessageSound("send");
+    }
     scrollActionRef.current = "bottom";
     setMessages((current) =>
       current.some((item) => item.id === message.id)
@@ -1121,18 +1167,29 @@ function Conversation({
     if (!afterRef.current || cursor > afterRef.current)
       afterRef.current = cursor;
     if (state) setConnectionState(state);
-    playMessageSound("send");
     onSent();
   }
 
-  async function send(event: FormEvent) {
-    event.preventDefault();
-    if (sending) return;
-    const content = draft.trim();
-    if (!content) return;
+  function dropDeliveredPending(incoming: ChatMessage[]) {
+    setPendingMessages((current) => {
+      if (current.length === 0) return current;
+      return current.filter(
+        (pending) =>
+          pending.status !== "sending" ||
+          !incoming.some(
+            (item) =>
+              item.senderId === meIdRef.current &&
+              item.content === pending.content,
+          ),
+      );
+    });
+  }
 
-    setSending(true);
-    setError("");
+  async function dispatchText(
+    tempId: string,
+    content: string,
+    replyToId: string | null,
+  ) {
     try {
       const response = await fetch("/api/messages", {
         method: "POST",
@@ -1140,7 +1197,7 @@ function Conversation({
         body: JSON.stringify({
           peerId: peer.id,
           content,
-          replyToId: replyTo?.id,
+          replyToId,
         }),
       });
       const data = await readJsonResponse<{
@@ -1149,21 +1206,88 @@ function Conversation({
         error?: string;
       }>(response);
       if (!data) {
-        setError(`Ошибка сервера (${response.status})`);
+        markPendingFailed(tempId, `Ошибка сервера (${response.status})`);
         return;
       }
       if (!response.ok || !data.message) {
-        setError(data.error ?? "Не отправилось");
+        markPendingFailed(tempId, data.error ?? "Не отправилось");
         return;
       }
 
-      setDraft("");
+      setPendingMessages((current) =>
+        current.filter((item) => item.tempId !== tempId),
+      );
+      setError("");
       addSentMessage(data.message, data.state);
     } catch {
-      setError("Сеть недоступна");
-    } finally {
-      setSending(false);
+      markPendingFailed(
+        tempId,
+        "Сеть недоступна — нажмите на сообщение, чтобы повторить",
+      );
     }
+  }
+
+  function markPendingFailed(tempId: string, message: string) {
+    setPendingMessages((current) =>
+      current.map((item) =>
+        item.tempId === tempId ? { ...item, status: "failed" } : item,
+      ),
+    );
+    setError(message);
+  }
+
+  function retryPending(item: PendingMessage) {
+    if (item.status !== "failed" || sending) return;
+    setError("");
+    setPendingMessages((current) =>
+      current.map((pending) =>
+        pending.tempId === item.tempId
+          ? { ...pending, status: "sending" as const }
+          : pending,
+      ),
+    );
+    void dispatchText(item.tempId, item.content, item.replyToId);
+  }
+
+  async function send(event: FormEvent) {
+    event.preventDefault();
+    if (sending) return;
+    const content = draft.trim();
+    if (!content) return;
+
+    const tempId = `pending-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    const activeReply = replyTo;
+
+    setPendingMessages((current) => [
+      ...current,
+      {
+        tempId,
+        content,
+        createdAt: new Date().toISOString(),
+        replyToId: activeReply?.id ?? null,
+        replySenderId: activeReply?.senderId ?? null,
+        replyPreview: activeReply
+          ? activeReply.kind === "voice"
+            ? `🎤 Голосовое · ${formatVoiceDuration(
+                activeReply.voice?.durationMs ?? null,
+              )}`
+            : activeReply.content
+          : null,
+        status: "sending",
+      },
+    ]);
+    setDraft("");
+    setReplyTo(null);
+    setEmojiOpen(false);
+    setError("");
+    setEnterIds([tempId]);
+    scrollActionRef.current = "bottom";
+    playMessageSound("send");
+    onSent();
+
+    void dispatchText(tempId, content, activeReply?.id ?? null);
   }
 
   async function sendVoice(blob: Blob, durationMs: number) {
@@ -1206,7 +1330,7 @@ function Conversation({
       }
 
       setVoiceActive(false);
-      addSentMessage(data.message, data.state);
+      addSentMessage(data.message, data.state, true);
       return true;
     } catch {
       setError("Сеть недоступна — запись можно отправить повторно");
@@ -1541,6 +1665,64 @@ function Conversation({
             );
           })
         )}
+        {pendingMessages.map((item) => {
+          const enter = enterIds.includes(item.tempId);
+          return (
+            <div className="mt-1.5" key={item.tempId}>
+              <div
+                className={`flex justify-end ${
+                  enter ? "msg-enter-mine" : ""
+                }`}
+              >
+                <div
+                  className={`message-bubble message-bubble-mine no-select relative min-w-[86px] max-w-[82%] rounded-[1.1rem] rounded-br-[0.4rem] border border-transparent bg-accent px-2.5 pt-1.5 pb-[7px] text-on-accent shadow-[0_10px_28px_-20px_rgba(0,0,0,0.9)] sm:max-w-[72%] ${
+                    item.status === "failed" ? "opacity-90" : ""
+                  }`}
+                  onClick={
+                    item.status === "failed"
+                      ? () => retryPending(item)
+                      : undefined
+                  }
+                  role={item.status === "failed" ? "button" : undefined}
+                  title={
+                    item.status === "failed"
+                      ? "Нажмите, чтобы отправить повторно"
+                      : undefined
+                  }
+                >
+                  {item.replyPreview ? (
+                    <div className="mb-1.5 rounded-xl border-l-[3px] border-[var(--on-accent)]/45 bg-black/10 px-2.5 py-1 text-xs">
+                      <p className="text-[11px] font-bold">
+                        Ответ{" "}
+                        {item.replySenderId === me.userId ? "себе" : peerName}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] opacity-70">
+                        <RichText text={item.replyPreview} />
+                      </p>
+                    </div>
+                  ) : null}
+                  <p className="whitespace-pre-wrap break-words text-[15px] leading-[1.35]">
+                    <RichText text={item.content} />
+                    <span className="meta-spacer" />
+                  </p>
+                  <div className="bubble-meta text-on-accent opacity-75">
+                    <span>{formatTime(item.createdAt)}</span>
+                    {item.status === "failed" ? (
+                      <span
+                        aria-hidden="true"
+                        className="grid size-3.5 place-items-center rounded-full bg-red-500 text-[9px] font-black leading-none text-white"
+                      >
+                        !
+                      </span>
+                    ) : (
+                      <ClockIcon />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
         </div>
 

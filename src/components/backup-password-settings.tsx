@@ -94,7 +94,7 @@ export function BackupPasswordSettings() {
   }
 
   return (
-    <section className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)]">
+    <section className="settings-card overflow-hidden">
       <div className="relative p-4">
         <div className="pointer-events-none absolute -top-14 -right-12 size-32 rounded-full bg-[var(--accent)]/10 blur-2xl" />
         <div className="relative flex items-start gap-3">
