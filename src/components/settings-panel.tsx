@@ -203,14 +203,14 @@ export function SettingsPanel({
                 </p>
                 <div className="space-y-2">
                   <input
-                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)]/70 px-3.5 py-2.5 text-sm transition focus:border-[var(--accent)]/60"
+                    className="admin-input"
                     onChange={(event) => setNftName(event.target.value)}
                     placeholder="Название"
                     value={nftName}
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <input
-                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)]/70 px-3.5 py-2.5 text-sm transition focus:border-[var(--accent)]/60"
+                      className="admin-input"
                       min={1}
                       max={50}
                       onChange={(event) => setNftQty(event.target.value)}
@@ -219,7 +219,7 @@ export function SettingsPanel({
                       value={nftQty}
                     />
                     <input
-                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)]/70 px-3.5 py-2.5 text-sm transition focus:border-[var(--accent)]/60"
+                      className="admin-input"
                       min={1}
                       onChange={(event) => setNftValue(event.target.value)}
                       placeholder="Ценность, ₽"
@@ -228,14 +228,14 @@ export function SettingsPanel({
                     />
                   </div>
                   <input
-                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)]/70 px-3.5 py-2.5 text-sm transition focus:border-[var(--accent)]/60"
+                    className="admin-input"
                     onChange={(event) => setNftImage(event.target.value)}
                     placeholder="Ссылка на картинку"
                     value={nftImage}
                   />
                 </div>
                 <button
-                  className="hover-accent mt-3 w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-on-accent shadow-[0_10px_24px_-12px_var(--accent)] transition disabled:opacity-50"
+                  className="admin-primary mt-3"
                   onClick={() => void mintNft()}
                   type="button"
                 >

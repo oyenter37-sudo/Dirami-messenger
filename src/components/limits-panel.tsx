@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RowsSkeleton } from "@/components/skeletons";
 import {
   USER_LIMIT_DEFINITIONS,
   type UserLimitKey,
@@ -90,8 +91,8 @@ export function LimitsPanel({ onClose, onMessageAdmin }: Props) {
               {error}
             </p>
           ) : !data ? (
-            <div className="py-16 text-center text-sm text-[var(--muted-2)]">
-              Загружаем лимиты…
+            <div className="mt-5">
+              <RowsSkeleton count={5} />
             </div>
           ) : (
             <>

@@ -5,6 +5,8 @@ import type { VoiceMessageMeta } from "@/lib/types";
 
 const BAR_COUNT = 28;
 
+const PLAYBACK_RATES = [1, 1.5, 2] as const;
+
 const waveCache = new Map<string, number[]>();
 
 function formatDuration(milliseconds: number) {
@@ -61,8 +63,22 @@ export function VoiceMessagePlayer({
   const [bars, setBars] = useState<number[]>(
     () => waveCache.get(messageId) ?? fallbackBars(messageId),
   );
+  const [rate, setRate] = useState<number>(1);
+  const seekingRef = useRef(false);
   const listened = Boolean(voice.listenedAt) || !voice.available;
   const src = `/api/messages/voice/${encodeURIComponent(messageId)}`;
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.playbackRate = rate;
+    const pitchable = audio as HTMLAudioElement & {
+      preservesPitch?: boolean;
+      webkitPreservesPitch?: boolean;
+    };
+    pitchable.preservesPitch = true;
+    pitchable.webkitPreservesPitch = true;
+  }, [rate]);
 
   useEffect(() => {
     if (listened) return;
@@ -124,10 +140,17 @@ export function VoiceMessagePlayer({
     }
   }
 
+  function cycleRate() {
+    setRate((current) => {
+      const index = PLAYBACK_RATES.indexOf(current as 1 | 1.5 | 2);
+      return PLAYBACK_RATES[(index + 1) % PLAYBACK_RATES.length];
+    });
+  }
+
   function seekTo(clientX: number) {
     const audio = audioRef.current;
     const rect = waveRef.current?.getBoundingClientRect();
-    if (!audio || !rect || !mine) return;
+    if (!audio || !rect) return;
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     audio.currentTime = (ratio * shownDuration) / 1000;
     setCurrentMs(Math.round(ratio * shownDuration));
@@ -203,7 +226,7 @@ export function VoiceMessagePlayer({
 
   return (
     <div
-      className={`w-[224px] max-w-full py-0.5 ${mine ? "" : "voice-player-theirs"}`}
+      className={`w-[244px] max-w-full py-0.5 ${mine ? "" : "voice-player-theirs"}`}
     >
       <audio
         ref={audioRef}
@@ -256,12 +279,37 @@ export function VoiceMessagePlayer({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <div
             aria-hidden="true"
-            className={`flex h-7 min-w-0 flex-1 items-center gap-[2px] ${
-              mine ? "cursor-pointer" : ""
-            }`}
+            className="flex h-7 min-w-0 flex-1 cursor-pointer items-center gap-[2px]"
+            onPointerCancel={(event) => {
+              try {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              } catch {
+                /* палец уже ушёл */
+              }
+              seekingRef.current = false;
+            }}
             onPointerDown={(event) => {
               event.stopPropagation();
+              seekingRef.current = true;
+              try {
+                event.currentTarget.setPointerCapture(event.pointerId);
+              } catch {
+                /* палец уже ушёл */
+              }
               seekTo(event.clientX);
+            }}
+            onPointerMove={(event) => {
+              if (!seekingRef.current) return;
+              event.stopPropagation();
+              seekTo(event.clientX);
+            }}
+            onPointerUp={(event) => {
+              try {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              } catch {
+                /* уже отпущено */
+              }
+              seekingRef.current = false;
             }}
             ref={waveRef}
           >
@@ -287,6 +335,19 @@ export function VoiceMessagePlayer({
                 : formatDuration(shownDuration)}
             </span>
           </span>
+          <button
+            aria-label="Скорость воспроизведения"
+            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-black tabular-nums transition active:scale-90 ${
+              mine
+                ? "bg-black/15 text-on-accent hover:bg-black/25"
+                : "bg-[var(--accent)]/15 text-accent hover:bg-[var(--accent)]/25"
+            }`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={cycleRate}
+            type="button"
+          >
+            {rate}×
+          </button>
         </div>
       </div>
       {error || marking || !mine ? (

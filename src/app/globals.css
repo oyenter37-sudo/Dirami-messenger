@@ -526,6 +526,117 @@ input:focus {
   }
 }
 
+/* ── Скелетоны загрузки ── */
+.skel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.skel::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--text) 8%, transparent),
+    transparent
+  );
+  animation: skel-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skel-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Новостные карточки ── */
+.news-card {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+@media (hover: hover) {
+  .news-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 34px -22px rgb(0 0 0 / 0.5);
+  }
+}
+
+/* ── Админка: единые поля и кнопки ── */
+.admin-input {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  padding: 0.65rem 0.9rem;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--text);
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.admin-input::placeholder {
+  color: var(--muted-2);
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--bg);
+}
+
+.admin-primary {
+  width: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  padding: 0.65rem 1rem;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--on-accent);
+  box-shadow: 0 10px 24px -12px var(--accent);
+  transition:
+    filter 0.16s ease,
+    transform 0.16s ease;
+}
+
+.admin-primary:hover {
+  filter: brightness(1.06);
+}
+
+.admin-primary:active {
+  transform: scale(0.985);
+}
+
+.admin-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.admin-ghost {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.admin-ghost:hover {
+  background: var(--accent-muted);
+  color: var(--text);
+}
+
 .menu-overlay {
   background: rgb(0 0 0 / 0.2);
 }
@@ -846,7 +957,8 @@ body:has(> .app-shell) {
   .msg-enter-mine,
   .msg-enter-theirs,
   .reaction-pill,
-  .conversation-in {
+  .conversation-in,
+  .skel::after {
     animation: none;
   }
 }

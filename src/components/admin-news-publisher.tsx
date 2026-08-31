@@ -58,14 +58,14 @@ export function AdminNewsPublisher() {
 
       <div className="mt-3 space-y-2">
         <input
-          className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-sm"
+          className="admin-input"
           maxLength={100}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Заголовок новости"
           value={title}
         />
         <textarea
-          className="min-h-32 w-full resize-y rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-sm leading-6"
+          className="admin-input min-h-32 resize-y leading-6"
           maxLength={3000}
           onChange={(event) => setContent(event.target.value)}
           placeholder="Текст новости"
@@ -78,7 +78,7 @@ export function AdminNewsPublisher() {
       </div>
 
       <button
-        className="hover-accent mt-3 w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-on-accent disabled:cursor-not-allowed disabled:opacity-50"
+        className="admin-primary mt-3"
         disabled={!ready || publishing}
         onClick={() => void publish()}
         type="button"
@@ -86,7 +86,15 @@ export function AdminNewsPublisher() {
         {publishing ? "Публикуем…" : "Опубликовать"}
       </button>
       {message ? (
-        <p className="mt-2 text-xs text-[var(--muted-2)]">{message}</p>
+        <p
+          className={`mt-2 rounded-xl px-3 py-2 text-xs ${
+            message.startsWith("Новость опубликована")
+              ? "bg-emerald-400/10 text-emerald-300"
+              : "bg-red-400/10 text-red-300"
+          }`}
+        >
+          {message}
+        </p>
       ) : null}
     </section>
   );

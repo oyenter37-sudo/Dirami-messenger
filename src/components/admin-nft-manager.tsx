@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { NftSkeleton, SearchSkeleton } from "@/components/skeletons";
 import { VerifiedName } from "@/components/verified-name";
 
 type AdminNftUser = {
@@ -223,7 +224,7 @@ export function AdminNftManager() {
 
       <div className="mt-4 flex gap-2">
         <input
-          className="min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-3 text-sm"
+          className="admin-input min-w-0 flex-1"
           onChange={(event) => {
             setQuery(event.target.value);
             setMessage("");
@@ -233,7 +234,7 @@ export function AdminNftManager() {
         />
         <button
           aria-label="Обновить список NFT"
-          className="grid size-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--bg)] text-lg transition hover:border-violet-300/40"
+          className="grid size-11 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--bg)] text-lg transition hover:border-violet-300/40 active:scale-95"
           onClick={() => {
             setMessage("");
             setRefreshKey((value) => value + 1);
@@ -246,9 +247,7 @@ export function AdminNftManager() {
 
       <div className="scrollbar-thin mt-3 max-h-[34rem] space-y-2 overflow-y-auto pr-0.5">
         {loading ? (
-          <p className="py-10 text-center text-xs text-[var(--muted-2)]">
-            Загружаем NFT…
-          </p>
+          <NftSkeleton count={3} />
         ) : nfts.length ? (
           nfts.map((nft) => (
             <article
@@ -397,9 +396,7 @@ export function AdminNftManager() {
                 {transfer.to.trim().length >= 2 ? (
                   <div className="mt-2 max-h-44 space-y-1 overflow-y-auto">
                     {recipientLoading ? (
-                      <p className="px-3 py-4 text-center text-xs text-[var(--muted-2)]">
-                        Ищем пользователя…
-                      </p>
+                      <SearchSkeleton count={2} />
                     ) : recipients.length ? (
                       recipients.map((user) => (
                         <button

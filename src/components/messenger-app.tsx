@@ -19,6 +19,7 @@ import { VerifiedName } from "@/components/verified-name";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SettingsPanel } from "@/components/settings-panel";
 import { AppleEmoji } from "@/components/apple-emoji";
+import { SearchSkeleton } from "@/components/skeletons";
 import { RichText } from "@/components/rich-text";
 import { VoiceMessagePlayer } from "@/components/voice-message-player";
 import {
@@ -656,7 +657,9 @@ export function MessengerApp({
 
         <ul className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
           {searching && query.trim() ? (
-            <li className="px-3 py-6 text-sm text-[var(--muted-2)]">Ищем…</li>
+            <li>
+              <SearchSkeleton count={4} />
+            </li>
           ) : sidebarItems.length === 0 ? (
             <li className="px-5 py-10 text-center">
               <p className="text-sm font-medium">

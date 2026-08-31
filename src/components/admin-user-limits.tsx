@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SearchSkeleton } from "@/components/skeletons";
 import { UserAvatar } from "@/components/user-avatar";
 import { VerifiedName } from "@/components/verified-name";
 import {
@@ -162,7 +163,7 @@ export function AdminUserLimits() {
       </div>
 
       <input
-        className="mt-4 w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-3 text-sm"
+        className="admin-input mt-4"
         onChange={(event) => {
           setQuery(event.target.value);
           setMessage("");
@@ -174,9 +175,7 @@ export function AdminUserLimits() {
       {query.trim() ? (
         <div className="mt-2 max-h-52 space-y-1 overflow-y-auto">
           {searching ? (
-            <p className="px-2 py-4 text-center text-xs text-[var(--muted-2)]">
-              Поиск…
-            </p>
+            <SearchSkeleton count={2} />
           ) : users.length ? (
             users.map((user) => (
               <button
@@ -231,7 +230,7 @@ export function AdminUserLimits() {
                 Имя
               </span>
               <input
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-sm"
+                className="admin-input"
                 maxLength={40}
                 onChange={(event) => setDisplayName(event.target.value)}
                 value={displayName}
@@ -326,7 +325,7 @@ export function AdminUserLimits() {
           </div>
 
           <button
-            className="hover-accent mt-4 w-full rounded-full bg-accent py-3 text-sm font-extrabold text-on-accent disabled:opacity-50"
+            className="admin-primary mt-4 py-3 text-sm font-extrabold"
             disabled={saving}
             onClick={() => void save()}
             type="button"

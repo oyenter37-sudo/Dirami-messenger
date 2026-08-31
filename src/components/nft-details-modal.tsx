@@ -85,8 +85,10 @@ export function NftDetailsModal({ nftId, onClose, onOpenProfile }: Props) {
               {error}
             </p>
           ) : !nft ? (
-            <div className="py-20 text-center text-sm text-[var(--muted-2)]">
-              Загружаем NFT…
+            <div aria-hidden="true" className="py-2">
+              <span className="skel block aspect-square w-full rounded-[1.75rem]" />
+              <span className="skel mt-4 block h-4 w-2/3" />
+              <span className="skel mt-2.5 block h-3 w-1/4" />
             </div>
           ) : (
             <>
