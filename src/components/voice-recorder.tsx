@@ -30,11 +30,13 @@ function preferredMimeType() {
 }
 
 export function VoiceRecorder({
+  autoStart = false,
   disabled,
   onActiveChange,
   onError,
   onSend,
 }: {
+  autoStart?: boolean;
   disabled: boolean;
   onActiveChange: (active: boolean) => void;
   onError: (message: string) => void;
@@ -54,10 +56,21 @@ export function VoiceRecorder({
   const mountedRef = useRef(true);
   const finishRef = useRef<() => void>(() => undefined);
   const onSendRef = useRef(onSend);
+  const startRecordingRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     onSendRef.current = onSend;
   }, [onSend]);
+
+  // Микрофон должен стартовать с первого тапа: родитель монтирует
+  // рекордер уже активированным, здесь только запускаем запись.
+  useEffect(() => {
+    startRecordingRef.current = () => void startRecording();
+  });
+
+  useEffect(() => {
+    if (autoStart) startRecordingRef.current();
+  }, [autoStart]);
 
   const changeMode = useCallback((next: RecorderMode) => {
     modeRef.current = next;
@@ -159,6 +172,7 @@ export function VoiceRecorder({
       !navigator.mediaDevices?.getUserMedia
     ) {
       onError("Этот браузер не поддерживает запись голосовых сообщений");
+      if (autoStart) onActiveChange(false);
       return;
     }
 
@@ -179,6 +193,7 @@ export function VoiceRecorder({
       startingRef.current = false;
       if (mountedRef.current && sessionRef.current === session) {
         onError("Разрешите Dirami доступ к микрофону");
+        if (autoStart) onActiveChange(false);
       }
       return;
     }
@@ -201,6 +216,7 @@ export function VoiceRecorder({
       } catch {
         stream.getTracks().forEach((track) => track.stop());
         onError("Не удалось запустить запись на этом устройстве");
+        if (autoStart) onActiveChange(false);
         return;
       }
     }
@@ -283,6 +299,18 @@ export function VoiceRecorder({
   }
 
   if (mode === "idle") {
+    if (autoStart) {
+      // Микрофон уже нажат — ждём разрешение браузера, показываем капсулу,
+      // а не маленькую кнопку: иначе выглядит как «надо нажать ещё раз».
+      return (
+        <div className="composer-capsule flex min-h-[44px] min-w-0 flex-1 items-center gap-2 rounded-[1.4rem] px-3.5">
+          <span className="size-2.5 shrink-0 animate-pulse rounded-full bg-red-400" />
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--muted-2)]">
+            Готовим микрофон…
+          </span>
+        </div>
+      );
+    }
     return (
       <button
         aria-label="Записать голосовое сообщение"
@@ -381,5 +409,48 @@ export function VoiceRecorder({
         )}
       </button>
     </div>
+  );
+}
+
+export function VoiceMicButton({
+  disabled,
+  onActivate,
+}: {
+  disabled?: boolean;
+  onActivate: () => void;
+}) {
+  return (
+    <button
+      aria-label="Записать голосовое сообщение"
+      className="grid size-9 shrink-0 place-items-center rounded-full text-[var(--muted-2)] transition hover:bg-[var(--accent-muted)] hover:text-accent disabled:opacity-40"
+      disabled={disabled}
+      onClick={onActivate}
+      title="Записать голосовое"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        fill="none"
+        height="19"
+        viewBox="0 0 24 24"
+        width="19"
+      >
+        <rect
+          height="12"
+          rx="4"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          width="7"
+          x="8.5"
+          y="2.5"
+        />
+        <path
+          d="M5.8 10.5a6.2 6.2 0 0 0 12.4 0M12 16.8V21m-3 0h6"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
+      </svg>
+    </button>
   );
 }

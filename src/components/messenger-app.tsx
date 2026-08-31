@@ -21,7 +21,10 @@ import { SettingsPanel } from "@/components/settings-panel";
 import { AppleEmoji } from "@/components/apple-emoji";
 import { RichText } from "@/components/rich-text";
 import { VoiceMessagePlayer } from "@/components/voice-message-player";
-import { VoiceRecorder } from "@/components/voice-recorder";
+import {
+  VoiceMicButton,
+  VoiceRecorder,
+} from "@/components/voice-recorder";
 import { HYPER_REACTIONS, REACTIONS } from "@/lib/reactions";
 import { playMessageSound, unlockMessageSounds } from "@/lib/message-sounds";
 import type {
@@ -1916,6 +1919,7 @@ function Conversation({
           ) : null}
           {voiceActive ? (
             <VoiceRecorder
+              autoStart
               key="voice-recorder"
               disabled={sending}
               onActiveChange={setVoiceActive}
@@ -1996,12 +2000,9 @@ function Conversation({
                   </svg>
                 </button>
               ) : (
-                <VoiceRecorder
-                  key="voice-recorder"
+                <VoiceMicButton
                   disabled={sending}
-                  onActiveChange={setVoiceActive}
-                  onError={setError}
-                  onSend={sendVoice}
+                  onActivate={() => setVoiceActive(true)}
                 />
               )}
             </div>
