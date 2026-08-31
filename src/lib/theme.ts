@@ -3,6 +3,7 @@ export const DEFAULT_THEME = "lagoon";
 
 export const THEMES = [
   { id: "lagoon", name: "Лагуна", hint: "бирюза и графит", swatch: ["#4fbfa8", "#7eb8c9"] },
+  { id: "day", name: "День", hint: "светлая, как в телеге", swatch: ["#2f9d85", "#eef1f2"] },
   { id: "ember", name: "Эмбер", hint: "тёплый уголь", swatch: ["#e08a3c", "#161618"] },
   { id: "blossom", name: "Сакура", hint: "пыльная роза", swatch: ["#d4899c", "#1d161c"] },
   { id: "aurora", name: "Аврора", hint: "приглушённый индиго", swatch: ["#8b82c4", "#181522"] },

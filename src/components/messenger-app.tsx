@@ -43,17 +43,94 @@ type Props = {
 };
 
 function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+const MONTHS_SHORT = [
+  "янв",
+  "фев",
+  "мар",
+  "апр",
+  "мая",
+  "июн",
+  "июл",
+  "авг",
+  "сен",
+  "окт",
+  "ноя",
+  "дек",
+];
+
+function formatListTime(iso: string) {
   const date = new Date(iso);
   const now = new Date();
-  const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) {
-    return date.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  if (date.toDateString() === now.toDateString()) {
+    return formatTime(iso);
   }
-  return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Вчера";
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]}${sameYear ? "" : ` ${String(date.getFullYear()).slice(2)}`}`;
 }
+
+function DoubleCheckIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="double-check"
+      fill="none"
+      height="11"
+      viewBox="0 0 19 13"
+      width="15"
+    >
+      <path
+        d="M1.2 7.4 4.7 10.8 11.2 3"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M8.4 7.4 11.9 10.8 18.2 3"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+const QUICK_EMOJIS = [
+  "😀",
+  "😂",
+  "🥲",
+  "😍",
+  "😎",
+  "🤔",
+  "😐",
+  "😴",
+  "🥳",
+  "😭",
+  "😤",
+  "😡",
+  "👍",
+  "👎",
+  "🙏",
+  "👏",
+  "💪",
+  "🤝",
+  "🔥",
+  "✨",
+  "🎉",
+  "❤️",
+  "💔",
+  "💯",
+] as const;
 
 function previewText(content: string) {
   return content.length > 42 ? `${content.slice(0, 42)}…` : content;
@@ -540,7 +617,7 @@ export function MessengerApp({
                     className={`mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition ${
                       active
                         ? "bg-accent-muted ring-1 ring-[var(--accent)]/40"
-                        : "hover:bg-white/5"
+                        : "hover:bg-[var(--accent-muted)]"
                     }`}
                     onClick={() => openSidebarItem(item)}
                     type="button"
@@ -568,7 +645,7 @@ export function MessengerApp({
                         </span>
                         {item.lastMessage ? (
                           <span className="shrink-0 text-[11px] text-[var(--muted-2)]">
-                            {formatTime(item.lastMessage.createdAt)}
+                            {formatListTime(item.lastMessage.createdAt)}
                           </span>
                         ) : null}
                       </span>
@@ -609,7 +686,7 @@ export function MessengerApp({
       </aside>
 
       <section
-        className={`chat-wallpaper h-full min-w-0 flex-1 flex-col ${peerId ? "flex" : "hidden md:flex"}`}
+        className={`chat-wallpaper relative h-full min-w-0 flex-1 flex-col ${peerId ? "flex" : "hidden md:flex"}`}
       >
         {!selected ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
@@ -754,6 +831,8 @@ function Conversation({
   );
   const [historyHasMore, setHistoryHasMore] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const afterRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -931,12 +1010,25 @@ function Conversation({
       if (saved) {
         container.scrollTop += container.scrollHeight - saved.height;
       }
-      return;
-    }
-    if (action === "bottom") {
+    } else if (action === "bottom") {
       bottomRef.current?.scrollIntoView({ block: "end" });
     }
+    requestAnimationFrame(updateScrollState);
   }, [messages.length]);
+
+  function updateScrollState() {
+    const container = scrollRef.current;
+    if (!container) return;
+    const distance =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    setShowScrollDown(distance > 480);
+  }
+
+  function scrollToBottom() {
+    scrollActionRef.current = "bottom";
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    setShowScrollDown(false);
+  }
 
   async function loadOlder() {
     if (loadingOlderRef.current || !historyHasMore) return;
@@ -1167,9 +1259,9 @@ function Conversation({
 
   return (
     <>
-      <header className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
+      <header className="chat-header absolute inset-x-0 top-0 z-20 flex items-center gap-3 border-b border-[var(--border)] px-4 py-2.5">
         <button
-          className="rounded-xl px-2 py-1 text-sm text-[var(--muted-2)] hover:bg-white/5 md:hidden"
+          className="rounded-xl px-2 py-1 text-sm text-[var(--muted-2)] transition hover:bg-[var(--accent-muted)] md:hidden"
           onClick={onBack}
           type="button"
         >
@@ -1197,23 +1289,31 @@ function Conversation({
                 truncate
               />
             </p>
-            <p className="text-[11px] text-[var(--muted-2)]">
+            <p
+              className={`text-[11px] ${
+                connectionState === "accepted"
+                  ? "text-accent"
+                  : "text-[var(--muted-2)]"
+              }`}
+            >
               {connectionState === "accepted"
-                ? "чат открыт"
+                ? "чат активен"
                 : stateLabel(connectionState)}
             </p>
           </div>
         </button>
       </header>
 
-      <div
-        className="chat-wallpaper scrollbar-thin flex-1 space-y-2 overflow-y-auto px-4 py-4 [overflow-anchor:none]"
-        onClick={() => setMenu(null)}
-        onScroll={(event) => {
-          if (event.currentTarget.scrollTop < 80) void loadOlder();
-        }}
-        ref={scrollRef}
-      >
+      <div className="relative min-h-0 flex-1">
+        <div
+          className="chat-wallpaper scrollbar-thin absolute inset-0 overflow-y-auto px-4 pt-[68px] pb-3 [overflow-anchor:none]"
+          onClick={() => setMenu(null)}
+          onScroll={(event) => {
+            if (event.currentTarget.scrollTop < 80) void loadOlder();
+            updateScrollState();
+          }}
+          ref={scrollRef}
+        >
         {historyHasMore ? (
           <div className="flex justify-center py-1">
             <button
@@ -1235,16 +1335,35 @@ function Conversation({
             const mine = message.senderId === me.userId;
             const enter = enterIds.includes(message.id);
             const previous = messages[index - 1];
+            const next = messages[index + 1];
             const showDate =
               !previous ||
               new Date(previous.createdAt).toDateString() !==
                 new Date(message.createdAt).toDateString();
+            const dateBeforeNext = next
+              ? new Date(next.createdAt).toDateString() !==
+                new Date(message.createdAt).toDateString()
+              : true;
+            const groupedTop =
+              !showDate && !!previous && previous.senderId === message.senderId;
+            const lastOfGroup =
+              !next || next.senderId !== message.senderId || dateBeforeNext;
+            const hasReactions = Boolean(message.reactions?.length);
+            const isVoice = message.kind === "voice" && message.voice;
+            const bubbleBottomPad = hasReactions
+              ? "pb-9"
+              : isVoice
+                ? "pb-7"
+                : "pb-2";
 
             return (
-              <div key={message.id}>
+              <div
+                className={groupedTop ? "mt-[3px]" : "mt-2"}
+                key={message.id}
+              >
                 {showDate ? (
                   <div className="my-4 flex justify-center first:mt-1">
-                    <span className="rounded-full border border-white/6 bg-[var(--panel)]/85 px-3 py-1 text-[10px] font-semibold text-[var(--muted-2)] shadow-sm">
+                    <span className="rounded-full border border-[var(--border)] bg-[var(--panel)]/90 px-3 py-1 text-[10px] font-semibold text-[var(--muted-2)] shadow-sm">
                       {messageDateLabel(message.createdAt)}
                     </span>
                   </div>
@@ -1255,10 +1374,14 @@ function Conversation({
                   }`}
                 >
                   <div
-                    className={`message-bubble no-select relative max-w-[84%] rounded-[1.35rem] border px-3.5 py-2.5 shadow-[0_12px_30px_-22px_rgba(0,0,0,0.9)] sm:max-w-[72%] ${
+                    className={`message-bubble no-select relative min-w-[92px] max-w-[84%] rounded-[1.25rem] border px-3 pt-2 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.9)] sm:max-w-[72%] ${bubbleBottomPad} ${
                       mine
-                        ? "message-bubble-mine rounded-br-[0.45rem] border-white/10 bg-accent text-on-accent"
-                        : "message-bubble-theirs rounded-bl-[0.45rem] border-white/6 bg-[var(--bubble-in)]"
+                        ? `message-bubble-mine border-transparent bg-accent text-on-accent ${
+                            lastOfGroup ? "rounded-br-[0.4rem]" : "no-tail"
+                          }`
+                        : `message-bubble-theirs border-[var(--border)] bg-[var(--bubble-in)] ${
+                            lastOfGroup ? "rounded-bl-[0.4rem]" : "no-tail"
+                          }`
                     }`}
                     onContextMenu={(event) => {
                       event.preventDefault();
@@ -1330,23 +1453,12 @@ function Conversation({
                         voice={message.voice}
                       />
                     ) : (
-                      <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.55]">
+                      <p className="whitespace-pre-wrap break-words text-[15px] leading-[1.4]">
                         <RichText text={message.content} />
+                        {hasReactions ? null : <span className="meta-spacer" />}
                       </p>
                     )}
-                    <div
-                      className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] ${
-                        mine
-                          ? "text-[var(--on-accent)]/60"
-                          : "text-[var(--muted-2)]"
-                      }`}
-                    >
-                      <span>{formatTime(message.createdAt)}</span>
-                      {mine ? (
-                        <span className="text-[10px] font-bold">✓</span>
-                      ) : null}
-                    </div>
-                    {message.reactions?.length ? (
+                    {hasReactions ? (
                       <div className="mt-1.5 flex flex-wrap justify-end gap-1">
                         {message.reactions.map((reaction) => (
                           <span
@@ -1354,9 +1466,7 @@ function Conversation({
                             className={`rounded-full border px-1.5 py-0.5 text-[11px] shadow-sm ${
                               reaction.mine
                                 ? "border-white/25 bg-white/20"
-                                : mine
-                                  ? "border-black/5 bg-black/10"
-                                  : "border-white/6 bg-black/20"
+                                : "border-black/10 bg-black/10"
                             }`}
                           >
                             <AppleEmoji emoji={reaction.emoji} />
@@ -1365,6 +1475,16 @@ function Conversation({
                         ))}
                       </div>
                     ) : null}
+                    <div
+                      className={`bubble-meta ${
+                        mine
+                          ? "text-on-accent opacity-75"
+                          : "text-[var(--muted-2)]"
+                      }`}
+                    >
+                      <span>{formatTime(message.createdAt)}</span>
+                      {mine ? <DoubleCheckIcon /> : null}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1372,6 +1492,33 @@ function Conversation({
           })
         )}
         <div ref={bottomRef} />
+        </div>
+
+        {showScrollDown ? (
+          <button
+            aria-label="Пролистать вниз"
+            className="chat-header absolute bottom-3 right-4 z-10 grid size-10 place-items-center rounded-full border border-[var(--border)] text-[var(--muted)] shadow-lg transition hover:text-accent"
+            onClick={scrollToBottom}
+            title="Вниз"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              fill="none"
+              height="18"
+              viewBox="0 0 24 24"
+              width="18"
+            >
+              <path
+                d="M12 4.5v15m0 0 6.2-6.2M12 19.5 5.8 13.3"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.9"
+              />
+            </svg>
+          </button>
+        ) : null}
       </div>
 
       {menu ? (
@@ -1391,7 +1538,7 @@ function Conversation({
               {REACTIONS.map((emoji) => (
                 <button
                   key={emoji}
-                  className="grid size-7 place-items-center rounded-full text-[15px] hover:bg-white/10"
+                  className="grid size-7 place-items-center rounded-full text-[15px] transition hover:bg-[var(--accent-muted)]"
                   onClick={() => void react(menu.id, emoji)}
                   title="Реакция"
                   type="button"
@@ -1427,7 +1574,7 @@ function Conversation({
             ) : null}
             <div className="mx-2 h-px bg-white/10" />
             <button
-              className="block w-full px-3.5 py-2 text-left text-[13px] hover:bg-white/10"
+              className="block w-full px-3.5 py-2 text-left text-[13px] transition hover:bg-[var(--accent-muted)]"
               onClick={() => {
                 const target = messages.find((item) => item.id === menu.id);
                 if (target) setReplyTo(target);
@@ -1438,7 +1585,7 @@ function Conversation({
               Ответить
             </button>
             <button
-              className="block w-full px-3.5 py-2 text-left text-[13px] hover:bg-white/10"
+              className="block w-full px-3.5 py-2 text-left text-[13px] transition hover:bg-[var(--accent-muted)]"
               onClick={async () => {
                 const target = messages.find((item) => item.id === menu.id);
                 if (target) await navigator.clipboard.writeText(target.content);
@@ -1498,7 +1645,7 @@ function Conversation({
         </div>
       ) : (
         <form
-          className="border-t border-[var(--border)] p-3"
+          className="border-t border-[var(--border)] bg-[var(--panel)]/60 p-2.5 sm:px-4 sm:py-3"
           onSubmit={(event) => void send(event)}
         >
           {connectionState === "none" ? (
@@ -1536,43 +1683,100 @@ function Conversation({
             <p className="mb-2 px-1 text-xs text-red-300">{error}</p>
           ) : null}
           <div className="flex items-end gap-2">
-            {!voiceActive ? (
-              <textarea
-                className="max-h-36 min-h-12 flex-1 resize-none rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm"
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    event.currentTarget.form?.requestSubmit();
-                  }
-                }}
-                placeholder={
-                  connectionState === "none"
-                    ? `Первое сообщение для ${peerName}`
-                    : replyTo
-                      ? "Напишите ответ"
-                      : `Сообщение для ${peerName}`
-                }
-                rows={1}
-                value={draft}
+            {voiceActive ? (
+              <VoiceRecorder
+                key="voice-recorder"
+                disabled={sending}
+                onActiveChange={setVoiceActive}
+                onError={setError}
+                onSend={sendVoice}
               />
-            ) : null}
-            <VoiceRecorder
-              key="voice-recorder"
-              disabled={sending}
-              onActiveChange={setVoiceActive}
-              onError={setError}
-              onSend={sendVoice}
-            />
-            {!voiceActive ? (
-              <button
-                className="hover-accent rounded-full bg-accent px-4 py-3 text-sm font-semibold text-on-accent disabled:opacity-50"
-                disabled={sending || !draft.trim()}
-                type="submit"
-              >
-                {connectionState === "none" ? "Запрос" : "Отправить"}
-              </button>
-            ) : null}
+            ) : (
+              <>
+                <div className="relative flex min-w-0 flex-1 items-end rounded-[1.5rem] border border-[var(--border)] bg-[var(--bg)] pr-1 transition focus-within:border-[var(--accent)]/55">
+                  <button
+                    aria-label="Выбрать эмодзи"
+                    className="grid size-10 shrink-0 place-items-center rounded-full text-[17px] transition hover:bg-[var(--accent-muted)]"
+                    onClick={() => setEmojiOpen((value) => !value)}
+                    title="Эмодзи"
+                    type="button"
+                  >
+                    <AppleEmoji emoji="😊" />
+                  </button>
+                  {emojiOpen ? (
+                    <>
+                      <div
+                        className="fixed inset-0 z-30"
+                        onClick={() => setEmojiOpen(false)}
+                      />
+                      <div className="glass-menu menu-pop absolute bottom-[calc(100%+8px)] left-0 z-40 w-[252px] rounded-2xl p-2">
+                        <div className="grid grid-cols-8 gap-0.5">
+                          {QUICK_EMOJIS.map((emoji) => (
+                            <button
+                              className="grid size-7 place-items-center rounded-full text-[16px] transition hover:bg-[var(--accent-muted)]"
+                              key={emoji}
+                              onClick={() =>
+                                setDraft((current) => current + emoji)
+                              }
+                              title="Добавить в сообщение"
+                              type="button"
+                            >
+                              <AppleEmoji emoji={emoji} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
+                  <textarea
+                    className="max-h-36 min-h-10 flex-1 resize-none bg-transparent px-1 py-2.5 text-[15px]"
+                    onChange={(event) => setDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        event.currentTarget.form?.requestSubmit();
+                      }
+                    }}
+                    placeholder={
+                      connectionState === "none"
+                        ? `Первое сообщение для ${peerName}`
+                        : replyTo
+                          ? "Напишите ответ"
+                          : `Сообщение для ${peerName}`
+                    }
+                    rows={1}
+                    value={draft}
+                  />
+                </div>
+                {draft.trim() ? (
+                  <button
+                    aria-label="Отправить"
+                    className="hover-accent grid size-11 shrink-0 place-items-center rounded-full bg-accent text-on-accent shadow-[0_10px_24px_-12px_var(--accent)] transition disabled:opacity-50"
+                    disabled={sending}
+                    title={connectionState === "none" ? "Отправить запрос" : "Отправить"}
+                    type="submit"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      fill="currentColor"
+                      height="19"
+                      viewBox="0 0 24 24"
+                      width="19"
+                    >
+                      <path d="M2 21l21-9L2 3v7l15 2-15 2z" />
+                    </svg>
+                  </button>
+                ) : (
+                  <VoiceRecorder
+                    key="voice-recorder"
+                    disabled={sending}
+                    onActiveChange={setVoiceActive}
+                    onError={setError}
+                    onSend={sendVoice}
+                  />
+                )}
+              </>
+            )}
           </div>
         </form>
       )}

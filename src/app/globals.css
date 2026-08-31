@@ -118,6 +118,24 @@ html[data-theme="dusk"] {
   --thumb: #4a3838;
 }
 
+html[data-theme="day"] {
+  --bg: #eef1f2;
+  --panel: #ffffff;
+  --text: #131b21;
+  --muted: #5f6b73;
+  --muted-2: #8a959c;
+  --border: rgb(19 27 33 / 0.09);
+  --accent: #2f9d85;
+  --accent-hover: #278a74;
+  --accent-soft: #357d8c;
+  --accent-muted: rgb(47 157 133 / 0.12);
+  --on-accent: #ffffff;
+  --bubble-in: #ffffff;
+  --glow-a: rgb(47 157 133 / 0.07);
+  --glow-b: rgb(122 168 184 / 0.1);
+  --thumb: #c2ccce;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -364,17 +382,61 @@ input:focus {
   clip-path: polygon(100% 0, 100% 76%, 0 100%);
 }
 
+.message-bubble.no-tail::after {
+  display: none;
+}
+
+.meta-spacer {
+  display: inline-block;
+  width: 64px;
+  height: 0;
+}
+
+.bubble-meta {
+  position: absolute;
+  right: 11px;
+  bottom: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .menu-overlay {
   background: rgb(0 0 0 / 0.2);
 }
 
 .glass-menu {
   width: 228px;
-  background: color-mix(in srgb, var(--panel) 82%, rgb(255 255 255 / 0.1));
-  border: 1px solid rgb(255 255 255 / 0.14);
-  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.chat-header {
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+@keyframes double-check-draw {
+  from {
+    opacity: 0;
+    transform: translateX(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.double-check {
+  animation: double-check-draw 0.2s ease-out both;
 }
 
 .menu-pop {
@@ -391,6 +453,13 @@ input:focus {
     auto,
     auto,
     360px 360px;
+}
+
+html[data-theme="day"] .chat-wallpaper {
+  background-image:
+    radial-gradient(900px 480px at 0% -10%, var(--glow-a), transparent 58%),
+    radial-gradient(820px 420px at 110% 110%, var(--glow-b), transparent 52%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%23204a42' stroke-opacity='0.055' stroke-width='1.2'%3E%3Ccircle cx='28' cy='34' r='10'/%3E%3Ccircle cx='96' cy='22' r='5'/%3E%3Ccircle cx='150' cy='58' r='14'/%3E%3Ccircle cx='62' cy='98' r='7'/%3E%3Ccircle cx='128' cy='124' r='9'/%3E%3Cpath d='M18 142c8-4 16 2 14 10M84 156c6 8 18 4 16-6M158 150c-10 2-12 14-2 16'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 .apple-emoji {
