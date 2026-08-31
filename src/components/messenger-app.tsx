@@ -4,6 +4,7 @@ import {
   FormEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -751,11 +752,29 @@ function Conversation({
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(
     null,
   );
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const afterRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const meIdRef = useRef(me.userId);
+  const loadingOlderRef = useRef(false);
+  const scrollRestoreRef = useRef<{ height: number; top: number } | null>(
+    null,
+  );
+  const scrollActionRef = useRef<"restore" | "bottom" | "none">("bottom");
   const pressTimer = useRef<number | null>(null);
   const pressStart = useRef({ x: 0, y: 0 });
   const [enterIds, setEnterIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    meIdRef.current = me.userId;
+  }, [me.userId]);
   const peerName = peer.displayName || peer.nickname;
   const canUseHyperReactions = Boolean(me.isHyperVerified);
 
@@ -831,13 +850,16 @@ function Conversation({
         const data = (await response.json()) as {
           messages: ChatMessage[];
           state: ChatState;
+          hasMore?: boolean;
         };
         if (cancelled) return;
         setConnectionState(data.state);
 
         if (!incremental) {
+          scrollActionRef.current = "bottom";
           setMessages(data.messages);
           setEnterIds([]);
+          setHistoryHasMore(Boolean(data.hasMore));
         } else if (data.messages.length > 0) {
           const incoming = data.messages;
           const cursorTime = after ? new Date(after).getTime() : 0;
@@ -846,13 +868,28 @@ function Conversation({
               .filter((item) => new Date(item.createdAt).getTime() > cursorTime)
               .map((item) => item.id),
           );
+          const seenIds = new Set(messagesRef.current.map((item) => item.id));
+          const fresh = incoming.filter((item) => !seenIds.has(item.id));
+          if (fresh.length > 0) {
+            const lastFresh = fresh[fresh.length - 1];
+            const container = scrollRef.current;
+            const nearBottom = container
+              ? container.scrollHeight -
+                  container.scrollTop -
+                  container.clientHeight <
+                220
+              : true;
+            scrollActionRef.current =
+              lastFresh.senderId === meIdRef.current || nearBottom
+                ? "bottom"
+                : "none";
+          }
           setMessages((current) => {
             const updates = new Map(incoming.map((item) => [item.id, item]));
             const merged = current.map((item) => updates.get(item.id) ?? item);
-            const seen = new Set(current.map((item) => item.id));
             return [
               ...merged,
-              ...incoming.filter((item) => !seen.has(item.id)),
+              ...incoming.filter((item) => !seenIds.has(item.id)),
             ];
           });
         }
@@ -883,13 +920,86 @@ function Conversation({
     };
   }, [peer.id, onAuthLost]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
+  useLayoutEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const action = scrollActionRef.current;
+    scrollActionRef.current = "none";
+    if (action === "restore") {
+      const saved = scrollRestoreRef.current;
+      scrollRestoreRef.current = null;
+      if (saved) {
+        container.scrollTop += container.scrollHeight - saved.height;
+      }
+      return;
+    }
+    if (action === "bottom") {
+      bottomRef.current?.scrollIntoView({ block: "end" });
+    }
   }, [messages.length]);
+
+  async function loadOlder() {
+    if (loadingOlderRef.current || !historyHasMore) return;
+    const oldest = messagesRef.current[0];
+    if (!oldest) return;
+
+    const container = scrollRef.current;
+    if (container) {
+      scrollRestoreRef.current = {
+        height: container.scrollHeight,
+        top: container.scrollTop,
+      };
+    }
+
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+
+    try {
+      const params = new URLSearchParams({
+        peerId: peer.id,
+        before: oldest.createdAt,
+      });
+      const response = await fetch(`/api/messages?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (response.status === 401) {
+        onAuthLost();
+        return;
+      }
+      if (!response.ok) {
+        scrollRestoreRef.current = null;
+        return;
+      }
+      const data = (await response.json()) as {
+        messages?: ChatMessage[];
+        hasMore?: boolean;
+      };
+      if (!data.messages?.length) {
+        scrollRestoreRef.current = null;
+        setHistoryHasMore(Boolean(data.hasMore));
+        return;
+      }
+      scrollActionRef.current = "restore";
+      setMessages((current) => {
+        const seen = new Set(current.map((item) => item.id));
+        return [
+          ...(data.messages ?? []).filter((item) => !seen.has(item.id)),
+          ...current,
+        ];
+      });
+      setHistoryHasMore(Boolean(data.hasMore));
+    } catch {
+      scrollRestoreRef.current = null;
+    } finally {
+      loadingOlderRef.current = false;
+      setLoadingOlder(false);
+    }
+  }
 
   function addSentMessage(message: ChatMessage, state?: ChatState) {
     setReplyTo(null);
     setEnterIds([message.id]);
+    scrollActionRef.current = "bottom";
     setMessages((current) =>
       current.some((item) => item.id === message.id)
         ? current.map((item) => (item.id === message.id ? message : item))
@@ -1097,9 +1207,25 @@ function Conversation({
       </header>
 
       <div
-        className="chat-wallpaper scrollbar-thin flex-1 space-y-2 overflow-y-auto px-4 py-4"
+        className="chat-wallpaper scrollbar-thin flex-1 space-y-2 overflow-y-auto px-4 py-4 [overflow-anchor:none]"
         onClick={() => setMenu(null)}
+        onScroll={(event) => {
+          if (event.currentTarget.scrollTop < 80) void loadOlder();
+        }}
+        ref={scrollRef}
       >
+        {historyHasMore ? (
+          <div className="flex justify-center py-1">
+            <button
+              className="rounded-full border border-[var(--border)] bg-[var(--panel)]/85 px-3 py-1 text-[11px] font-semibold text-[var(--muted-2)] transition hover:text-[var(--text)] disabled:opacity-60"
+              disabled={loadingOlder}
+              onClick={() => void loadOlder()}
+              type="button"
+            >
+              {loadingOlder ? "Загружаем историю…" : "Загрузить ещё"}
+            </button>
+          </div>
+        ) : null}
         {messages.length === 0 ? (
           <p className="py-12 text-center text-sm text-[var(--muted-2)]">
             {emptyText}

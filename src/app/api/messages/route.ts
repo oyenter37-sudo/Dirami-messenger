@@ -27,6 +27,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const peerId = url.searchParams.get("peerId");
   const after = url.searchParams.get("after");
+  const before = url.searchParams.get("before");
+  const limitParam = Number(url.searchParams.get("limit"));
 
   if (!peerId) return jsonError("Не указан собеседник", 400);
 
@@ -72,48 +74,93 @@ export async function GET(request: Request) {
 
   const state = chatStateFor(chat, me);
   if (state === "none" || state === "blocked") {
-    return NextResponse.json({ peer, state, messages: [] });
+    return NextResponse.json({ peer, state, messages: [], hasMore: false });
   }
 
   const afterDate = after ? new Date(after) : null;
   const validAfter =
     afterDate && !Number.isNaN(afterDate.getTime()) ? afterDate : null;
+  const beforeDate = before ? new Date(before) : null;
+  const validBefore =
+    beforeDate && !Number.isNaN(beforeDate.getTime()) ? beforeDate : null;
+  const limit =
+    Number.isInteger(limitParam) && limitParam >= 1 && limitParam <= 200
+      ? limitParam
+      : 200;
 
-  const messages = await prisma.message.findMany({
-    where: {
-      AND: [
-        {
-          OR: [
-            { senderId: me, receiverId: peerId },
-            { senderId: peerId, receiverId: me },
-          ],
-        },
-        validAfter
-          ? {
-              OR: [
-                { createdAt: { gt: validAfter } },
-                { voice: { listenedAt: { gt: validAfter } } },
-              ],
-            }
-          : {},
-      ],
-    },
-    include: messageInclude,
-    orderBy: { createdAt: "asc" },
-    take: 200,
-  });
+  const pairFilter = {
+    OR: [
+      { senderId: me, receiverId: peerId },
+      { senderId: peerId, receiverId: me },
+    ],
+  };
 
-  if (state === "accepted" || state === "pending_in") {
-    await prisma.message.updateMany({
-      where: { senderId: peerId, receiverId: me, readAt: null },
-      data: { readAt: new Date() },
+  const markRead =
+    state === "accepted" || state === "pending_in"
+      ? async () => {
+          await prisma.message.updateMany({
+            where: { senderId: peerId, receiverId: me, readAt: null },
+            data: { readAt: new Date() },
+          });
+        }
+      : null;
+
+  // Incremental poll: messages created strictly after the cursor, plus voice
+  // messages whose "listened" state changed after it.
+  if (validAfter) {
+    const messages = await prisma.message.findMany({
+      where: {
+        AND: [
+          pairFilter,
+          {
+            OR: [
+              { createdAt: { gt: validAfter } },
+              { voice: { listenedAt: { gt: validAfter } } },
+            ],
+          },
+        ],
+      },
+      include: messageInclude,
+      orderBy: { createdAt: "asc" },
+      take: limit,
+    });
+
+    if (markRead) await markRead();
+
+    return NextResponse.json({
+      peer,
+      state,
+      messages: messages.map((message) => serializeMessage(message, me)),
+      hasMore: false,
     });
   }
+
+  // History page: latest `limit` messages, optionally only those older than
+  // the `before` cursor. Fetched newest-first so long chats open at the end,
+  // then reversed to chronological order for the client.
+  const rows = await prisma.message.findMany({
+    where: validBefore
+      ? { AND: [pairFilter, { createdAt: { lt: validBefore } }] }
+      : pairFilter,
+    include: messageInclude,
+    orderBy: { createdAt: "desc" },
+    take: limit + 1,
+  });
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const messages = page
+    .slice()
+    .reverse()
+    .map((message) => serializeMessage(message, me));
+
+  if (markRead) await markRead();
 
   return NextResponse.json({
     peer,
     state,
-    messages: messages.map((message) => serializeMessage(message, me)),
+    messages,
+    hasMore,
   });
 }
 
